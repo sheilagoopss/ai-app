@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,41 +20,42 @@ import {
 } from "@/components/ui/card";
 import { VideoInput } from "@/components/courses/VideoInput";
 import { Plus } from "lucide-react";
-import { Course } from "@/types/course";
-import { Video } from "@/types/video";
+import { ICourse } from "@/types/course";
 import { isValidYouTubeUrl, getYouTubeVideoId } from "@/utils/youtube";
+import { IVideo } from "@/types/video";
+import { Button } from "antd";
 
 interface CourseFormProps {
-  onSubmit: (course: Course) => void;
+  onSubmit: (course: ICourse) => void;
+  formData: Omit<ICourse, "id">;
+  setFormData: (formData: Omit<ICourse, "id">) => void;
+  isAddingCourse: boolean;
+  videos: Array<Partial<IVideo>>;
+  setVideos: (videos: Array<Partial<IVideo>>) => void;
 }
 
-export function CourseForm({ onSubmit }: CourseFormProps) {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    instructor: "",
-    duration: "",
-    level: "Beginner" as Course["level"],
-  });
-
-  const [videos, setVideos] = useState<Array<Partial<Video>>>([]);
+export function CourseForm({
+  onSubmit,
+  formData,
+  setFormData,
+  videos,
+  setVideos,
+  isAddingCourse,
+}: CourseFormProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleVideoChange = (index: number, data: Partial<Video>) => {
-    setVideos((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], ...data };
-      return updated;
-    });
+  const handleVideoChange = (index: number, data: Partial<IVideo>) => {
+    const updated = [...videos];
+    updated[index] = { ...updated[index], ...data };
+    setVideos(updated);
   };
 
   const addVideo = () => {
-    setVideos((prev) => [...prev, {}]);
+    setVideos([...videos, {}]);
   };
 
   const removeVideo = (index: number) => {
-    setVideos((prev) => prev.filter((_, i) => i !== index));
+    setVideos(videos.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
@@ -99,16 +99,16 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
 
     const processedVideos = videos.map((video) => ({
       ...video,
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 9),
       url:
         video.type === "youtube"
           ? getYouTubeVideoId(video.url || "") || ""
           : video.url || "",
       createdAt: new Date(),
-    })) as Video[];
+    })) as IVideo[];
 
-    const courseData: Course = {
-      id: Math.random().toString(36).substr(2, 9),
+    const courseData: ICourse = {
+      id: Math.random().toString(36).substring(2, 9),
       ...formData,
       videos: processedVideos,
     };
@@ -134,7 +134,7 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                   id="title"
                   value={formData.title}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                    setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="Enter course title"
                 />
@@ -149,10 +149,7 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                   id="instructor"
                   value={formData.instructor}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      instructor: e.target.value,
-                    }))
+                    setFormData({ ...formData, instructor: e.target.value })
                   }
                   placeholder="Enter instructor name"
                 />
@@ -168,10 +165,7 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
+                  setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="Enter course description"
               />
@@ -186,7 +180,7 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                 <Select
                   value={formData.category}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, category: value }))
+                    setFormData({ ...formData, category: value })
                   }
                 >
                   <SelectTrigger id="category">
@@ -212,8 +206,8 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                 <Label htmlFor="level">Level</Label>
                 <Select
                   value={formData.level}
-                  onValueChange={(value: Course["level"]) =>
-                    setFormData((prev) => ({ ...prev, level: value }))
+                  onValueChange={(value: ICourse["level"]) =>
+                    setFormData({ ...formData, level: value })
                   }
                 >
                   <SelectTrigger id="level">
@@ -233,10 +227,7 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
                   id="duration"
                   value={formData.duration}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      duration: e.target.value,
-                    }))
+                    setFormData({ ...formData, duration: e.target.value })
                   }
                   placeholder="e.g., 6 hours"
                 />
@@ -250,8 +241,11 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium">Course Videos</h3>
-              <Button type="button" onClick={addVideo} variant="outline">
-                <Plus className="h-4 w-4 mr-2" /> Add Video
+              <Button
+                onClick={addVideo}
+                icon={<Plus className="h-4 w-4 mr-2" />}
+              >
+                Add Video
               </Button>
             </div>
 
@@ -276,7 +270,11 @@ export function CourseForm({ onSubmit }: CourseFormProps) {
           </div>
 
           <div className="flex justify-end gap-4">
-            <Button type="submit" disabled={videos.length === 0}>
+            <Button
+              disabled={videos.length === 0}
+              loading={isAddingCourse}
+              htmlType="submit"
+            >
               Create Course
             </Button>
           </div>

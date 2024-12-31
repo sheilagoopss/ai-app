@@ -1,37 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { CourseFilter } from "@/components/courses/CourseFilter";
 import { CourseCard } from "@/components/courses/CourseCard";
 import { CourseViewer } from "@/components/courses/CourseViewer";
-import { Course } from "@/types/course";
+import { ICourse } from "@/types/course";
 import { Search } from "lucide-react";
-
-// Sample data - in a real app, this would come from an API
-const sampleCourses: Course[] = [
-  {
-    id: "1",
-    title: "Introduction to Web Development",
-    description: "Learn the basics of HTML, CSS, and JavaScript",
-    category: "Web Development",
-    instructor: "John Doe",
-    duration: "6 hours",
-    level: "Beginner",
-    videos: [
-      {
-        id: "v1",
-        title: "HTML Basics",
-        description: "Learn the fundamentals of HTML",
-        type: "youtube",
-        url: "dQw4w9WgXcQ",
-        createdAt: new Date(),
-      },
-      // Add more videos...
-    ],
-  },
-  // Add more courses...
-];
+import { useGetCourses } from "@/hooks/useCourse";
+import { Spin } from "antd";
 
 const categories = [
   "Web Development",
@@ -42,12 +19,14 @@ const categories = [
 const levels = ["Beginner", "Intermediate", "Advanced"];
 
 export default function Courses() {
+  const { getCourses, isFetchingCourses } = useGetCourses();
+  const [courses, setCourses] = useState<ICourse[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<ICourse | null>(null);
 
-  const filteredCourses = sampleCourses.filter((course) => {
+  const filteredCourses = courses.filter((course) => {
     const matchesSearch =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -67,6 +46,12 @@ export default function Courses() {
       setSelectedLevel(value);
     }
   };
+
+  useEffect(() => {
+    getCourses().then((courses) => {
+      setCourses(courses);
+    });
+  }, [getCourses]);
 
   return (
     <div className="container mx-auto py-10">
@@ -113,6 +98,9 @@ export default function Courses() {
         course={selectedCourse}
         onClose={() => setSelectedCourse(null)}
       />
+      <div className="flex justify-center items-center h-screen">
+        <Spin spinning={isFetchingCourses} />
+      </div>
     </div>
   );
 }

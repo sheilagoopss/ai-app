@@ -1,7 +1,7 @@
-type CollectionName = "users" | "admins" | "videos";
+type CollectionName = "users" | "admins" | "courses";
 
 export const COLLECTIONS: Record<CollectionName, CollectionName> = {
   users: "users",
   admins: "admins",
-  videos: "videos",
+  courses: "courses",
 };

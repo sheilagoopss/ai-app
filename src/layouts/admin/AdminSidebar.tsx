@@ -1,16 +1,24 @@
 "use client";
 
 import React from "react";
-import { Menu, Typography } from "antd";
+import { Button, Menu } from "antd";
 import type { MenuProps } from "antd";
-import { UserOutlined, PlusOutlined, BookOutlined } from "@ant-design/icons";
+import {
+  UserOutlined,
+  PlusOutlined,
+  BookOutlined,
+  LogoutOutlined,
+} from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/constants/routes";
 import Sider from "antd/es/layout/Sider";
+import { Footer, Header } from "antd/es/layout/layout";
+import { useAuth } from "@/contexts/AuthContext";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
 const AdminSidebar = () => {
+  const { logout } = useAuth();
   const router = useRouter();
   const currentPath = usePathname();
 
@@ -39,10 +47,21 @@ const AdminSidebar = () => {
         router.push(ROUTES.ADMIN.COURSES);
       },
     },
+    {
+      key: ROUTES.ADMIN.USERS,
+      icon: <UserOutlined />,
+      label: "Users",
+      onClick: () => {
+        router.push(ROUTES.ADMIN.USERS);
+      },
+    },
   ];
 
   return (
     <Sider width={280} theme="light">
+      <Header style={{ backgroundColor: "white" }}>
+        <div className="text-2xl font-bold">AI Tools</div>
+      </Header>
       <div
         style={{
           height: "100vh",
@@ -53,20 +72,11 @@ const AdminSidebar = () => {
           width: "280px",
         }}
       >
-        <div style={{ padding: "4px 24px 0" }}>
-          {/* <Image
-            src={"/images/logo.png"}
-            alt="goopss logo"
-            style={{ height: 64, marginBottom: 0 }}
-            width={100}
-            height={64}
-          /> */}
-          <Typography.Title level={3}>Course</Typography.Title>
-        </div>
-
         <Menu
           mode="inline"
-          selectedKeys={[currentPath]}
+          selectedKeys={[
+            currentPath === "/" ? ROUTES.ADMIN.DASHBOARD : currentPath,
+          ]}
           style={{
             borderRight: "none",
             flex: 1,
@@ -76,6 +86,13 @@ const AdminSidebar = () => {
           items={adminMenuItems}
         />
       </div>
+      <Footer style={{ backgroundColor: "white", position: "fixed", bottom: 0 }}>
+        <div className="text-center">
+          <Button type="text" danger onClick={logout} icon={<LogoutOutlined />}>
+            Logout
+          </Button>
+        </div>
+      </Footer>
     </Sider>
   );
 };

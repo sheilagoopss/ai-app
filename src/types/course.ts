@@ -1,6 +1,6 @@
-import { Video } from "./video";
+import { IVideo } from "./video";
 
-export interface Course {
+export interface ICourse {
   id: string;
   title: string;
   description: string;
@@ -8,5 +8,5 @@ export interface Course {
   instructor: string;
   duration: string;
   level: "Beginner" | "Intermediate" | "Advanced";
-  videos: Video[];
+  videos: IVideo[];
 }

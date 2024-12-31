@@ -1,6 +1,6 @@
 export type VideoType = 'youtube' | 'upload';
 
-export interface Video {
+export interface IVideo {
   id: string;
   title: string;
   description: string;

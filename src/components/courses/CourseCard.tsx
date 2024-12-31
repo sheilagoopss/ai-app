@@ -8,11 +8,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, PlayCircle } from "lucide-react";
-import { Course } from "@/types/course";
+import { ICourse } from "@/types/course";
 
 interface CourseCardProps {
-  course: Course;
-  onViewCourse: (course: Course) => void;
+  course: ICourse;
+  onViewCourse: (course: ICourse) => void;
 }
 
 export function CourseCard({ course, onViewCourse }: CourseCardProps) {

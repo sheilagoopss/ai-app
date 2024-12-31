@@ -148,7 +148,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       setLoggingIn(true);
       const resp = await signInWithEmailAndPassword(auth, email, password);
-
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.includes("google.com")) {
         const provider = new GoogleAuthProvider();

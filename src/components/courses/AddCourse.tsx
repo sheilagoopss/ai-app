@@ -1,23 +1,41 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { CourseForm } from "@/components/courses/CourseForm";
-import { Course } from "@/types/course";
+import { ICourse } from "@/types/course";
 import { message } from "antd";
+import { useAddCourse } from "@/hooks/useCourse";
+import { useState } from "react";
+import { IVideo } from "@/types/video";
 
 export default function AddCourse() {
-  const router = useRouter();
+  const { addCourse, isAddingCourse } = useAddCourse();
+  const [videos, setVideos] = useState<Array<Partial<IVideo>>>([]);
+  const [formData, setFormData] = useState<Omit<ICourse, "id">>({
+    title: "",
+    description: "",
+    category: "",
+    instructor: "",
+    duration: "",
+    level: "Beginner" as ICourse["level"],
+    videos: [],
+  });
 
-  const handleSubmit = async (courseData: Course) => {
+  const handleSubmit = async (courseData: ICourse) => {
     try {
-      // In a real application, you would make an API call here
-      console.log("Submitting course:", courseData);
-
-      // Show success message
-      message.success("Course created successfully!");
-
-      // Redirect to courses page
-      router.push("/courses");
+      const course = await addCourse(courseData);
+      if (course) {
+        message.success("Course created successfully!");
+        setFormData({
+          title: "",
+          description: "",
+          category: "",
+          instructor: "",
+          duration: "",
+          level: "Beginner" as ICourse["level"],
+          videos: [],
+        });
+        setVideos([]);
+      }
     } catch (error) {
       console.error(error);
       message.error("Failed to create course. Please try again.");
@@ -25,9 +43,15 @@ export default function AddCourse() {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-8">Create New Course</h1>
-      <CourseForm onSubmit={handleSubmit} />
+    <div className="container mx-auto mt-20">
+      <CourseForm
+        onSubmit={handleSubmit}
+        formData={formData}
+        setFormData={setFormData}
+        isAddingCourse={isAddingCourse}
+        videos={videos}
+        setVideos={setVideos}
+      />
     </div>
   );
 }

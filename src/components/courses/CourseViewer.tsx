@@ -7,10 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VideoCard } from "@/components/courses/VideoCard";
-import { Course } from "@/types/course";
+import { ICourse } from "@/types/course";
 
 interface CourseViewerProps {
-  course: Course | null;
+  course: ICourse | null;
   onClose: () => void;
 }
 
@@ -25,7 +25,7 @@ export function CourseViewer({ course, onClose }: CourseViewerProps) {
           <DialogDescription>{course.description}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-full pr-4">
-          <div className="space-y-4">
+          <div className="space-y-4 mb-10">
             {course.videos.map((video, index) => (
               <div key={video.id} className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">

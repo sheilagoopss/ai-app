@@ -3,6 +3,7 @@ export const ROUTES = {
     DASHBOARD: "/admin",
     COURSES: "/admin/courses",
     NEW_COURSE: "/admin/new-course",
+    USERS: "/admin/users",
   },
   USER: {
     DASHBOARD: "/",

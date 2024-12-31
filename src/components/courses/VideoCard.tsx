@@ -12,12 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Video } from "@/types/video";
+import { IVideo } from "@/types/video";
+import { getYouTubeVideoId } from "@/utils/youtube";
 
 interface VideoCardProps {
-  video: Video;
-  onEdit: (video: Video) => void;
-  onDelete: (video: Video) => void;
+  video: IVideo;
+  onEdit: (video: IVideo) => void;
+  onDelete: (video: IVideo) => void;
 }
 
 export function VideoCard({ video, onEdit, onDelete }: VideoCardProps) {
@@ -26,7 +27,7 @@ export function VideoCard({ video, onEdit, onDelete }: VideoCardProps) {
       <div className="relative aspect-video">
         {video.type === "youtube" ? (
           <iframe
-            src={`https://www.youtube.com/embed/${video.url}`}
+            src={`https://www.youtube.com/embed/${getYouTubeVideoId(video.url)}`}
             className="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

@@ -19,14 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Video, VideoType } from "@/types/video";
+import { IVideo, VideoType } from "@/types/video";
 import { isValidYouTubeUrl, getYouTubeVideoId } from "@/utils/youtube";
 
 interface VideoFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (video: Partial<Video>) => void;
-  initialData?: Video;
+  onSubmit: (video: Partial<IVideo>) => void;
+  initialData?: IVideo;
 }
 
 export function VideoForm({
@@ -57,7 +57,7 @@ export function VideoForm({
       return;
     }
 
-    const videoData: Partial<Video> = {
+    const videoData: Partial<IVideo> = {
       title: title.trim(),
       description: description.trim(),
       type,
