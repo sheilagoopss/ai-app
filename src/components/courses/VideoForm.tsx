@@ -52,7 +52,7 @@ export function VideoForm({
       return;
     }
 
-    if (type === "youtube" && !isValidYouTubeUrl(url)) {
+    if (type === "youtube" && !isValidYouTubeUrl(url as string)) {
       setError("Please enter a valid YouTube URL");
       return;
     }
@@ -61,7 +61,7 @@ export function VideoForm({
       title: title.trim(),
       description: description.trim(),
       type,
-      url: type === "youtube" ? getYouTubeVideoId(url)! : url,
+      url: type === "youtube" ? getYouTubeVideoId(url as string)! : url,
     };
 
     onSubmit(videoData);
@@ -119,7 +119,7 @@ export function VideoForm({
               <Label htmlFor="url">YouTube URL</Label>
               <Input
                 id="url"
-                value={url}
+                value={url as string}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="Enter YouTube video URL"
               />

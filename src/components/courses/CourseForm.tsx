@@ -24,6 +24,7 @@ import { ICourse } from "@/types/course";
 import { isValidYouTubeUrl, getYouTubeVideoId } from "@/utils/youtube";
 import { IVideo } from "@/types/video";
 import { Button } from "antd";
+import { useFileUpload } from "@/hooks/useFileUpload";
 
 interface CourseFormProps {
   onSubmit: (course: ICourse) => void;
@@ -43,6 +44,7 @@ export function CourseForm({
   isAddingCourse,
 }: CourseFormProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const { uploadFiles, isUploading } = useFileUpload();
 
   const handleVideoChange = (index: number, data: Partial<IVideo>) => {
     const updated = [...videos];
@@ -81,7 +83,7 @@ export function CourseForm({
       if (!video.title?.trim()) {
         newErrors[`video-${index}`] = "Video title is required";
       }
-      if (video.type === "youtube" && !isValidYouTubeUrl(video.url || "")) {
+      if (video.type === "youtube" && !isValidYouTubeUrl(video.url as string || "")) {
         newErrors[`video-${index}`] = "Invalid YouTube URL";
       }
     });
@@ -90,22 +92,36 @@ export function CourseForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    const processedVideos = videos.map((video) => ({
-      ...video,
-      id: Math.random().toString(36).substring(2, 9),
-      url:
-        video.type === "youtube"
-          ? getYouTubeVideoId(video.url || "") || ""
-          : video.url || "",
-      createdAt: new Date(),
-    })) as IVideo[];
+    const processedVideos: IVideo[] = [];
+
+    for (const video of videos) {
+      if (video.type === "youtube") {
+        processedVideos.push({
+          ...video,
+          id: Math.random().toString(36).substring(2, 9),
+          url:
+            video.type === "youtube"
+              ? getYouTubeVideoId(video.url as string || "") || ""
+              : video.url || "",
+          createdAt: new Date(),
+        } as IVideo);
+      } else {
+        const url = await uploadFiles([video.url as File]);
+        processedVideos.push({
+          ...video,
+          id: Math.random().toString(36).substring(2, 9),
+          url: url[0],
+          createdAt: new Date(),
+        } as IVideo);
+      }
+    }
 
     const courseData: ICourse = {
       id: Math.random().toString(36).substring(2, 9),
@@ -257,6 +273,7 @@ export function CourseForm({
                   onRemove={() => removeVideo(index)}
                   onChange={handleVideoChange}
                   error={errors[`video-${index}`]}
+                  video={videos[index]}
                 />
               ))}
             </div>
@@ -272,7 +289,7 @@ export function CourseForm({
           <div className="flex justify-end gap-4">
             <Button
               disabled={videos.length === 0}
-              loading={isAddingCourse}
+              loading={isAddingCourse || isUploading}
               htmlType="submit"
             >
               Create Course

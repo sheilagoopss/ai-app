@@ -13,7 +13,7 @@ import {
 import { db, storage } from "@/firebase/config";
 import { filterUndefined } from "@/utils/filterUndefined";
 import { COLLECTIONS } from "@/firebase/collections";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes, uploadBytesResumable } from "firebase/storage";
 
 class FirebaseHandler {
   private db: Firestore;
@@ -118,6 +118,39 @@ class FirebaseHandler {
       const storageRef = ref(storage, `${folder}/${uniqueFileName}`);
       await uploadBytes(storageRef, blob);
       downloadURL = await getDownloadURL(storageRef);
+    }
+
+    return downloadURL;
+  }
+  async uploadFileDirect(file: File, folder = "files"): Promise<string> {
+    let downloadURL = "";
+    if (file) {
+      const fileExtension = file.name.split(".").pop() || "unknown";
+      const uniqueFileName = `${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}.${fileExtension}`;
+      const storageRef = ref(storage, `${folder}/${uniqueFileName}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      // Monitor upload progress and handle completion
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log(`Upload is ${progress}% done`);
+          },
+          (error) => {
+            console.error("Upload failed:", error);
+            reject(error);
+          },
+          async () => {
+            downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve();
+          },
+        );
+      });
     }
 
     return downloadURL;

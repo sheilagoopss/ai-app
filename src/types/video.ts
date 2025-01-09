@@ -5,7 +5,7 @@ export interface IVideo {
   title: string;
   description: string;
   type: VideoType;
-  url: string;
+  url: string | File;
   thumbnail?: string;
   createdAt: Date;
 }
