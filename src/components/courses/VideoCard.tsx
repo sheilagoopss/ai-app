@@ -27,14 +27,14 @@ export function VideoCard({ video, onEdit, onDelete }: VideoCardProps) {
       <div className="relative aspect-video">
         {video.type === "youtube" ? (
           <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeVideoId(video.url)}`}
+            src={`https://www.youtube.com/embed/${getYouTubeVideoId(video.url as string)}`}
             className="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         ) : (
           <video
-            src={video.url}
+            src={typeof video.url === "string" ? video.url : URL.createObjectURL(video.url)}
             className="absolute inset-0 w-full h-full object-cover"
             controls
           />

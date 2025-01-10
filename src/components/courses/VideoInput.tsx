@@ -9,13 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { IVideo } from "@/types/video";
+import DragDropUpload from "../common/DragDropUpload";
 
 interface VideoInputProps {
   index: number;
   onRemove: () => void;
   onChange: (index: number, data: any) => void;
   error?: string;
+  video: Partial<IVideo>;
 }
 
 export function VideoInput({
@@ -23,6 +26,7 @@ export function VideoInput({
   onRemove,
   onChange,
   error,
+  video,
 }: VideoInputProps) {
   return (
     <div className="space-y-4 p-4 border rounded-lg relative">
@@ -70,15 +74,43 @@ export function VideoInput({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`video-url-${index}`}>Video URL/File</Label>
-        <Input
-          id={`video-url-${index}`}
-          type="text"
-          placeholder="Enter YouTube URL or upload a file"
-          onChange={(e) => onChange(index, { url: e.target.value })}
-        />
-      </div>
+      {video.type === "youtube" && (
+        <div className="space-y-2">
+          <Label htmlFor={`video-url-${index}`}>Video URL/File</Label>
+          <Input
+            id={`video-url-${index}`}
+            type="text"
+            placeholder="Enter YouTube URL or upload a file"
+            onChange={(e) => onChange(index, { url: e.target.value })}
+          />
+        </div>
+      )}
+
+      {video.type === "upload" && (
+        <div className="space-y-2">
+          <DragDropUpload
+            multiple={false}
+            handleUpload={(e) => onChange(index, { url: e[0] })}
+            fileType=".mp4,.mov,.avi,.mkv,.wmv,.flv,.webm"
+            fileValidation="video/"
+          />
+          {video.url && (
+            <div className="flex flex-col items-center gap-2">
+              <video
+                src={typeof video.url === "string" ? video.url : URL.createObjectURL(video.url)}
+                controls
+                className="w-full h-auto"
+              />
+              <Button
+                variant="outline"
+                onClick={() => onChange(index, { url: "" })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
