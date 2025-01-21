@@ -1,11 +1,10 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Clock, LinkIcon, Info } from "lucide-react";
 import { Image, Pagination, Spin } from "antd";
 import { Tool } from "@/types/tools";
-import { useFetchTools } from "@/hooks/useFetchTools";
+import useFetchTools from "@/hooks/useFetchTools";
 
 export default function Scraper() {
   const [filteredResults, setFilteredResults] = useState<Tool[]>([]);
