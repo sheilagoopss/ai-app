@@ -1,9 +1,11 @@
+"use client";
+
 import { useCallback, useState } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import axios from "axios";
 import { Tool } from "@/types/tools";
 
-export const useFetchTools = () => {
+const useFetchTools = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState("");
   const [tools, setTools] = useLocalStorage("tools", []);
@@ -28,3 +30,5 @@ export const useFetchTools = () => {
 
   return { tools, isFetching, error, fetchTools };
 };
+
+export default useFetchTools;
