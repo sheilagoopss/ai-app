@@ -55,19 +55,19 @@ const AdminSidebar = () => {
         router.push(ROUTES.ADMIN.USERS);
       },
     },
-    {
-      key: ROUTES.ADMIN.AI_TOOLS,
-      icon: <UserOutlined />,
-      label: "AI Tools",
-      onClick: () => {
-        router.push(ROUTES.ADMIN.AI_TOOLS);
-      },
-    },
+    // {
+    //   key: ROUTES.ADMIN.AI_TOOLS,
+    //   icon: <UserOutlined />,
+    //   label: "AI Tools",
+    //   onClick: () => {
+    //     router.push(ROUTES.ADMIN.AI_TOOLS);
+    //   },
+    // },
   ];
 
   return (
     <Sider width={280} theme="light">
-      <Header style={{ backgroundColor: "white" }}>
+      <Header style={{ backgroundColor: "white" }} className="py-4">
         <div className="text-2xl font-bold">AI Tools</div>
       </Header>
       <div

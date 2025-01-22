@@ -1,3 +1,5 @@
+"use client";
+
 import UserHeader from "./UserHeader";
 import { Layout } from "antd";
 

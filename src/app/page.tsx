@@ -4,9 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import AdminPage from "./admin/page";
 import { Spin } from "antd";
 import Courses from "./courses/page";
-import UserLayout from "@/layouts/user/UserLayout";
-import AdminLayout from "@/layouts/admin/AdminLayout";
-import HomeLayout from "@/layouts/home/HomeLayout";
 import Scraper from "./ai-tools/page";
 
 export default function Home() {
@@ -14,16 +11,10 @@ export default function Home() {
   return loading ? (
     <Spin fullscreen />
   ) : userData ? (
-    <UserLayout>
-      <Courses />
-    </UserLayout>
+    <Courses />
   ) : admin ? (
-    <AdminLayout>
-      <AdminPage />
-    </AdminLayout>
+    <AdminPage />
   ) : (
-    <HomeLayout>
-      <Scraper />
-    </HomeLayout>
+    <Scraper />
   );
 }

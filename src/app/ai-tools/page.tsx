@@ -2,52 +2,37 @@
 
 import React, { useState, useEffect } from "react";
 import { Clock, LinkIcon, Info } from "lucide-react";
-import { Image, Pagination, Spin } from "antd";
+import { Image, Pagination, Skeleton, Spin } from "antd";
 import { Tool } from "@/types/tools";
 import useFetchTools from "@/hooks/useFetchTools";
+import { caseInsensitiveSearch } from "@/utils/caseInsensitveMatch";
 
 export default function Scraper() {
   const [filteredResults, setFilteredResults] = useState<Tool[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const { tools, isFetching, error, fetchTools } = useFetchTools();
-  const [total, setTotal] = useState(0);
+  const {
+    paginatedTools,
+    isFetching,
+    error,
+    fetchTools,
+    lastItem,
+    total,
+    tools,
+    isFetchingTotal,
+  } = useFetchTools();
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const ITEMS_PER_PAGE = 10;
 
-  // Fetch tools when the component mounts
-  useEffect(() => {
-    fetchTools();
-  }, []);
-
-  useEffect(() => {
-    if (tools.length > 0) {
-      setFilteredResults(tools.slice(0, 10));
-    }
-  }, [tools]);
-
-  useEffect(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    if (searchTerm === "") {
-      setFilteredResults(tools.slice(startIndex, endIndex));
-      setTotal(tools.length);
-    } else {
-      const filtered = tools.filter((tool: Tool) =>
-        tool.toolName.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-      setFilteredResults(filtered.slice(startIndex, endIndex));
-      setTotal(filtered.length);
-    }
-  }, [currentPage, tools, searchTerm]);
-
   const handleFindTools = async () => {
-    const filtered = tools.filter((tool: Tool) =>
-      tool.toolName.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-    setFilteredResults(filtered.slice(0, 10));
-    setTotal(filtered.length);
-    setCurrentPage(1);
+    const filtered = tools
+      .filter(
+        (tool) =>
+          caseInsensitiveSearch(tool.toolName, searchTerm) ||
+          caseInsensitiveSearch(tool.description, searchTerm),
+      )
+      .slice(0, ITEMS_PER_PAGE);
+    setFilteredResults(filtered);
   };
 
   // Handle search input change
@@ -56,9 +41,31 @@ export default function Scraper() {
     const value = event.target.value;
     setSearchTerm(value);
     // Filter results based on search term
-    await handleFindTools();
+    if (value.length > 0) {
+      await handleFindTools();
+    } else {
+      setCurrentPage(1);
+      fetchTools({
+        limitToFirst: ITEMS_PER_PAGE,
+        startAfter: undefined,
+      });
+    }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (paginatedTools.length > 0) {
+      setFilteredResults(paginatedTools);
+    }
+  }, [paginatedTools]);
+
+  useEffect(() => {
+    fetchTools({
+      limitToFirst: ITEMS_PER_PAGE,
+      startAfter: lastItem,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -77,6 +84,7 @@ export default function Scraper() {
             placeholder="Search for a tool..."
             className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
+          {/* <AIToolSearch /> */}
         </div>
 
         <div>
@@ -179,12 +187,16 @@ export default function Scraper() {
                   );
                 })}
               </div>
-              <Pagination
-                current={currentPage}
-                total={total}
-                pageSize={ITEMS_PER_PAGE}
-                onChange={(page) => setCurrentPage(page)}
-              />
+              {isFetchingTotal ? (
+                <Skeleton.Button active style={{ width: "30ch" }} />
+              ) : (
+                <Pagination
+                  current={currentPage}
+                  total={total}
+                  pageSize={ITEMS_PER_PAGE}
+                  onChange={(page) => setCurrentPage(page)}
+                />
+              )}
             </div>
           )}
         </div>
