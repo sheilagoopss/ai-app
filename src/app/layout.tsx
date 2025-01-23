@@ -5,6 +5,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ConfigProvider } from "antd";
 import Script from "next/script";
+import Layout from "@/layouts/Layout";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -55,7 +56,9 @@ export default function RootLayout({
           }}
         >
           <AuthProvider>
-            <AntdRegistry>{children}</AntdRegistry>
+            <AntdRegistry>
+              <Layout>{children}</Layout>
+            </AntdRegistry>
           </AuthProvider>
         </ConfigProvider>
       </body>

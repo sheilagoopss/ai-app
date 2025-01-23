@@ -1,64 +1,96 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Clock, LinkIcon, Info } from "lucide-react";
-import { Image, Pagination, Spin } from "antd";
+import { Image, Input, Pagination, Segmented, Skeleton, Spin } from "antd";
 import { Tool } from "@/types/tools";
 import useFetchTools from "@/hooks/useFetchTools";
+import { caseInsensitiveSearch } from "@/utils/caseInsensitveMatch";
+import AIToolSearch from "@/components/common/AIToolSearch";
 
 export default function Scraper() {
   const [filteredResults, setFilteredResults] = useState<Tool[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const { tools, isFetching, error, fetchTools } = useFetchTools();
-  const [total, setTotal] = useState(0);
+  const {
+    paginatedTools,
+    isFetching,
+    error,
+    fetchTools,
+    lastItem,
+    total,
+    tools,
+    isFetchingTotal,
+  } = useFetchTools();
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [searchType, setSearchType] = useState("Manual");
   const ITEMS_PER_PAGE = 10;
 
-  // Fetch tools when the component mounts
-  useEffect(() => {
-    fetchTools();
-  }, []);
-
-  useEffect(() => {
-    if (tools.length > 0) {
-      setFilteredResults(tools.slice(0, 10));
-    }
-  }, [tools]);
-
-  useEffect(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    if (searchTerm === "") {
-      setFilteredResults(tools.slice(startIndex, endIndex));
-      setTotal(tools.length);
-    } else {
-      const filtered = tools.filter((tool: Tool) =>
-        tool.toolName.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-      setFilteredResults(filtered.slice(startIndex, endIndex));
-      setTotal(filtered.length);
-    }
-  }, [currentPage, tools, searchTerm]);
-
   const handleFindTools = async () => {
-    const filtered = tools.filter((tool: Tool) =>
-      tool.toolName.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-    setFilteredResults(filtered.slice(0, 10));
-    setTotal(filtered.length);
-    setCurrentPage(1);
+    const filtered = tools
+      .filter(
+        (tool) =>
+          caseInsensitiveSearch(tool.toolName, searchTerm) ||
+          caseInsensitiveSearch(tool.description, searchTerm),
+      )
+      .slice(0, ITEMS_PER_PAGE);
+    setFilteredResults(filtered);
   };
 
-  // Handle search input change
-  const handleSearch = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAIToolSearch = useCallback(async () => {
+    if (keywords.length === 0) {
+      return;
+    }
+    const filtered = tools
+      .filter((tool) =>
+        keywords.some(
+          (keyword) =>
+            caseInsensitiveSearch(tool.toolName, keyword) ||
+            caseInsensitiveSearch(tool.description, keyword),
+        ),
+      )
+      .slice(0, ITEMS_PER_PAGE);
+    setFilteredResults(filtered);
+    setKeywords([]);
+  }, [keywords, tools]);
+
+  const handleSearch = async () => {
     setIsLoading(true);
-    const value = event.target.value;
-    setSearchTerm(value);
-    // Filter results based on search term
-    await handleFindTools();
+    if (searchTerm.length > 0) {
+      await handleFindTools();
+    } else {
+      setCurrentPage(1);
+      setFilteredResults(paginatedTools);
+    }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (paginatedTools.length > 0) {
+      setFilteredResults(paginatedTools);
+    }
+  }, [paginatedTools]);
+
+  const handleClear = () => {
+    setSearchTerm("");
+    setKeywords([]);
+    setFilteredResults(paginatedTools);
+  };
+
+  useEffect(() => {
+    fetchTools({
+      limitToFirst: ITEMS_PER_PAGE,
+      startAfter: lastItem,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (keywords.length > 0) {
+      handleAIToolSearch();
+    }
+  }, [handleAIToolSearch, keywords]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -68,15 +100,26 @@ export default function Scraper() {
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
 
+        <Segmented
+          options={["Manual", "AI"]}
+          onChange={(value) => setSearchType(value)}
+        />
         {/* Search Bar */}
-        <div className="mb-4">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearch}
-            placeholder="Search for a tool..."
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
+        <div className="mb-4 flex flex-col gap-2">
+          {searchType === "Manual" && (
+            <Input.Search
+              size="large"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onSearch={handleSearch}
+              placeholder="Search for a tool..."
+              allowClear
+              onClear={handleClear}
+            />
+          )}
+          {searchType === "AI" && (
+            <AIToolSearch setKeywords={setKeywords} onClear={handleClear} />
+          )}
         </div>
 
         <div>
@@ -179,12 +222,16 @@ export default function Scraper() {
                   );
                 })}
               </div>
-              <Pagination
-                current={currentPage}
-                total={total}
-                pageSize={ITEMS_PER_PAGE}
-                onChange={(page) => setCurrentPage(page)}
-              />
+              {isFetchingTotal ? (
+                <Skeleton.Button active style={{ width: "30ch" }} />
+              ) : (
+                <Pagination
+                  current={currentPage}
+                  total={total}
+                  pageSize={ITEMS_PER_PAGE}
+                  onChange={(page) => setCurrentPage(page)}
+                />
+              )}
             </div>
           )}
         </div>
