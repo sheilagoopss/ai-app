@@ -29,8 +29,11 @@ export const useFetchAiTools = (
   const [error, setError] = useState<Error | null>(null);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const fetchPage = useCallback(async () => {
+    if (!hasMore) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -58,43 +61,47 @@ export const useFetchAiTools = (
       }
 
       const snapshot = await getDocs(q);
-
       const newData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Tool[];
 
-      const filter = [...data, ...newData].reduce((acc, item) => {
-        if (!acc.some((i) => i.uuid === item.uuid)) {
-          acc.push(item);
-        }
-        return acc;
-      }, [] as Tool[]);
+      setData((prevData) => {
+        const filter = [...prevData, ...newData].reduce((acc, item) => {
+          if (!acc.some((i) => i.uuid === item.uuid)) {
+            acc.push(item);
+          }
+          return acc;
+        }, [] as Tool[]);
+        return filter;
+      });
 
-      setData(filter);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(newData.length === pageSize);
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
     }
-  }, [pageSize, searchTerm]);
+  }, [pageSize, searchTerm, lastVisible, hasMore]);
 
   const nextPage = async () => {
-    if (!loading) {
+    if (!loading && hasMore) {
       await fetchPage();
     }
   };
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setData([]);
     setLastVisible(null);
+    setHasMore(true);
     setResetTrigger((prev) => prev + 1);
-  };
+  }, []);
 
-  useEffect(() => {
-    fetchPage();
-  }, [fetchPage, resetTrigger]);
+  // useEffect(() => {
+  //   reset();
+  //   fetchPage();
+  // }, [fetchPage, reset, searchTerm, resetTrigger]);
 
   return { data, loading, error, nextPage, reset };
 };
