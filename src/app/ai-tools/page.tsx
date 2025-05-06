@@ -6,23 +6,23 @@ import { Tool } from "@/types/tools";
 import useFetchTools from "@/hooks/useFetchTools";
 import { caseInsensitiveSearch } from "@/utils/caseInsensitveMatch";
 import AIToolSearch from "@/components/common/AIToolSearch";
-import { useFetchAiTools } from "@/hooks/useFetchAiTools";
 import AiCard from "@/components/aiTools/aiCard";
+import { YoutubeResult } from "@/helpers/YoutubeSearchHelper";
+import { useYoutubeSearch } from "@/hooks/useYoutubeSearch";
+import { AIToolYoutubeCard } from "@/components/aiTools/aiToolYoutubeCard";
+import { CloseOutlined } from "@ant-design/icons";
 
 const ITEMS_PER_PAGE = 20;
 
 export default function Scraper() {
+  const { paginatedTools, error, fetchTools, tools } = useFetchTools();
+  const { isLoadingYoutubeTools, searchYoutubeAiTools } = useYoutubeSearch();
+
   const [filteredResults, setFilteredResults] = useState<Tool[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const { paginatedTools, error, fetchTools, lastItem, tools } =
-    useFetchTools();
-  const [currentPage, setCurrentPage] = useState(1);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [searchType, setSearchType] = useState("Manual");
-  const { data, loading, nextPage, reset } = useFetchAiTools(
-    currentPage * ITEMS_PER_PAGE,
-    searchTerm,
-  );
+  const [youtubeTools, setYoutubeTools] = useState<YoutubeResult[]>([]);
 
   const handleAIToolSearch = useCallback(async () => {
     if (keywords.length === 0) {
@@ -40,6 +40,11 @@ export default function Scraper() {
     setKeywords([]);
   }, [keywords, tools]);
 
+  const handleYoutubeSearch = async () => {
+    const youtubeTools = await searchYoutubeAiTools(searchTerm);
+    setYoutubeTools(youtubeTools);
+  };
+
   useEffect(() => {
     if (paginatedTools.length > 0) {
       setFilteredResults(paginatedTools);
@@ -50,15 +55,16 @@ export default function Scraper() {
     setSearchTerm("");
     setKeywords([]);
     setFilteredResults(paginatedTools);
+    setYoutubeTools([]);
   };
 
   useEffect(() => {
     fetchTools({
       limitToFirst: ITEMS_PER_PAGE,
-      startAfter: lastItem,
     });
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, []);
 
   useEffect(() => {
     if (keywords.length > 0) {
@@ -79,16 +85,13 @@ export default function Scraper() {
           onChange={(value) => setSearchType(value)}
         />
         {/* Search Bar */}
-        <div className="mb-4 flex flex-col gap-2">
+        <div className="mb-4 flex flex-row gap-2">
           {searchType === "Manual" && (
             <Input.Search
               size="large"
-              // value={searchTerm}
-              // onChange={(e) => setSearchTerm(e.target.value)}
-              onSearch={(value) => {
-                setSearchTerm(value);
-                reset();
-              }}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onSearch={handleYoutubeSearch}
               placeholder="Search for a tool..."
               allowClear
               onClear={handleClear}
@@ -97,10 +100,11 @@ export default function Scraper() {
           {searchType === "AI" && (
             <AIToolSearch setKeywords={setKeywords} onClear={handleClear} />
           )}
+          <Button icon={<CloseOutlined />} onClick={handleClear} size="large" />
         </div>
 
         <div>
-          {loading ? (
+          {isLoadingYoutubeTools ? (
             <div className="flex justify-center items-center h-screen w-full">
               <Spin />
             </div>
@@ -108,8 +112,8 @@ export default function Scraper() {
             <div className="space-y-4 w-full flex flex-col items-center">
               {searchType === "Manual" && (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {data.map((item, index) => (
-                    <AiCard key={index} tool={item} index={index} />
+                  {youtubeTools.map((item, index) => (
+                    <AIToolYoutubeCard key={index} tool={item} />
                   ))}
                 </div>
               )}
@@ -119,19 +123,6 @@ export default function Scraper() {
                     <AiCard key={index} tool={item} index={index} />
                   ))}
                 </div>
-              )}
-              {searchType === "Manual" && (
-                <Button
-                  type="primary"
-                  size="large"
-                  onClick={() => {
-                    setCurrentPage(currentPage + 1);
-                    nextPage();
-                  }}
-                  disabled={loading}
-                >
-                  Load More
-                </Button>
               )}
             </div>
           )}
