@@ -1,3 +1,5 @@
+import { GENERATE_SEARCH_KEYWORDS_PROMPT } from "@/constants/prompts";
+import GeminiHelper, { AIToolResponse } from "./GeminiHelper";
 import HttpHelper from "./HttpHelper";
 
 export type YoutubeResult = {
@@ -16,15 +18,16 @@ export type YoutubeResult = {
 
 class YoutubeSearchHelper {
   private YOUTUBE_API_V3_KEY: string;
+  private geminiHelper: GeminiHelper;
 
   constructor() {
     this.YOUTUBE_API_V3_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_V3_KEY || "";
+    this.geminiHelper = new GeminiHelper();
   }
 
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-
   private async getVideoDetails(videoId: string): Promise<any | null> {
     const baseUrl = "https://www.googleapis.com/youtube/v3/videos";
     const params = new URLSearchParams({
@@ -35,7 +38,6 @@ class YoutubeSearchHelper {
     const response = await HttpHelper.get(`${baseUrl}?${params.toString()}`);
     return response?.data;
   }
-
   private findSentenceBoundary(text: string, maxLength = 200): string {
     if (text.length <= maxLength) return text;
     const sentenceEndings = [". ", "! ", "? "];
@@ -52,7 +54,6 @@ class YoutubeSearchHelper {
     }
     return text.substring(0, bestEnd).trim();
   }
-
   private async searchYoutube(
     query: string,
     maxResults = 50,
@@ -214,48 +215,14 @@ class YoutubeSearchHelper {
     }
     return resultsWithDetails;
   }
-
-  // Placeholder for Gemini API integration
   private async generateSearchKeywords(question: string): Promise<string[]> {
-    // In production, call Gemini API here.
-    // For now, return some mock keywords for demonstration.
-    // You should replace this with a real LLM call.
-    // Example: return await callGemini(question);
-    if (question.toLowerCase().includes("content writing")) {
-      return [
-        "jasper ai writing tutorial",
-        "copy ai content creation demo",
-        "writesonic tutorial",
-      ];
-    }
-    if (question.toLowerCase().includes("image generation")) {
-      return [
-        "midjourney v6 tutorial",
-        "dall-e 3 image generation",
-        "stable diffusion xl guide",
-      ];
-    }
-    if (question.toLowerCase().includes("coding")) {
-      return [
-        "github copilot coding tutorial",
-        "codeium ai programming demo",
-        "tabnine code assistant guide",
-      ];
-    }
-    // Fallback: just use the question as a single keyword
-    return [question];
+    const prompt = GENERATE_SEARCH_KEYWORDS_PROMPT;
+    const keywords = await this.geminiHelper.generateContent(
+      prompt + "\n\nQuestion:\n" + question,
+    );
+    return keywords?.split("\n") || [];
   }
-
-  public async search(query: string): Promise<{
-    query: string;
-    combined_results: YoutubeResult[];
-    youtube_results: YoutubeResult[];
-    tools_results: any[];
-    total_results: number;
-    youtube_count: number;
-    tools_count: number;
-    timestamp: string;
-  }> {
+  public async search(query: string): Promise<AIToolResponse[]> {
     // Get combined results from multiple tool-specific searches
     const keywords = await this.generateSearchKeywords(query);
     let allResults: YoutubeResult[] = [];
@@ -265,16 +232,14 @@ class YoutubeSearchHelper {
       // Optionally sleep to avoid API rate limits
       await this.sleep(100);
     }
-    return {
-      query,
-      combined_results: allResults,
-      youtube_results: allResults,
-      tools_results: [],
-      total_results: allResults.length,
-      youtube_count: allResults.length,
-      tools_count: 0,
-      timestamp: new Date().toISOString(),
-    };
+    if (allResults.length > 0) {
+      const selectedResults = await this.geminiHelper.pickMostRelevantAiTools(
+        allResults,
+      );
+
+      return selectedResults;
+    }
+    return [];
   }
 }
 

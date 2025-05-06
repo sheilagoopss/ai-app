@@ -7,10 +7,10 @@ import useFetchTools from "@/hooks/useFetchTools";
 import { caseInsensitiveSearch } from "@/utils/caseInsensitveMatch";
 import AIToolSearch from "@/components/common/AIToolSearch";
 import AiCard from "@/components/aiTools/aiCard";
-import { YoutubeResult } from "@/helpers/YoutubeSearchHelper";
 import { useYoutubeSearch } from "@/hooks/useYoutubeSearch";
-import { AIToolYoutubeCard } from "@/components/aiTools/aiToolYoutubeCard";
 import { CloseOutlined } from "@ant-design/icons";
+import { AIToolResponse } from "@/helpers/GeminiHelper";
+import AIToolCard from "@/components/aiTools/aiToolCard";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -22,7 +22,7 @@ export default function Scraper() {
   const [searchTerm, setSearchTerm] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [searchType, setSearchType] = useState("Manual");
-  const [youtubeTools, setYoutubeTools] = useState<YoutubeResult[]>([]);
+  const [youtubeTools, setYoutubeTools] = useState<AIToolResponse[]>([]);
 
   const handleAIToolSearch = useCallback(async () => {
     if (keywords.length === 0) {
@@ -42,7 +42,13 @@ export default function Scraper() {
 
   const handleYoutubeSearch = async () => {
     const youtubeTools = await searchYoutubeAiTools(searchTerm);
-    setYoutubeTools(youtubeTools);
+    if (youtubeTools && Array.isArray(youtubeTools)) {
+      const uniqueTools = youtubeTools.filter(
+        (tool, index, self) =>
+          index === self.findIndex((t) => t.toolLink === tool.toolLink),
+      );
+      setYoutubeTools(uniqueTools);
+    }
   };
 
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function Scraper() {
               {searchType === "Manual" && (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {youtubeTools.map((item, index) => (
-                    <AIToolYoutubeCard key={index} tool={item} />
+                    <AIToolCard key={index} tool={item} />
                   ))}
                 </div>
               )}
