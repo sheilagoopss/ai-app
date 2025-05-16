@@ -21,6 +21,12 @@ interface ToolCardProps {
   tool: Tool;
 }
 
+// Helper to extract YouTube video ID from a URL
+function getYoutubeId(url: string) {
+  const match = url.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
 export function AIToolCard({ tool }: ToolCardProps) {
   const domain = new URL(tool.toolLink).hostname.replace("www.", "");
 
@@ -36,7 +42,7 @@ export function AIToolCard({ tool }: ToolCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="overflow-hidden transition-all hover:shadow-md">
+      <Card className="overflow-hidden transition-all h-full flex flex-col">
         <CardHeader className="flex flex-row items-center gap-3 pb-2">
           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
             <Avatar className="h-10 w-10 border">
@@ -54,7 +60,7 @@ export function AIToolCard({ tool }: ToolCardProps) {
             <h3 className="font-medium text-sm mt-1">{toolName}</h3>
           </div>
         </CardHeader>
-        <CardContent className="pb-3">
+        <CardContent className="pb-3 flex-1">
           <motion.h2
             className="font-medium text-base line-clamp-2 mb-2"
             initial={{ opacity: 0 }}
@@ -72,34 +78,43 @@ export function AIToolCard({ tool }: ToolCardProps) {
             {tool.summary}
           </motion.p>
         </CardContent>
-        <CardFooter className="flex justify-between pt-0">
+        {tool.videoLink && getYoutubeId(tool.videoLink) && (
+          <div className="w-full px-4 flex justify-center mt-2 mb-4">
+            <a
+              href={tool.videoLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg overflow-hidden w-full relative"
+              style={{ minHeight: '12rem' }}
+            >
+              <img
+                src={`https://img.youtube.com/vi/${getYoutubeId(tool.videoLink)}/hqdefault.jpg`}
+                alt="YouTube Tutorial Thumbnail"
+                className="w-full h-48 object-cover"
+              />
+              <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="bg-black/70 rounded-full p-3 flex items-center justify-center">
+                  <Play className="w-8 h-8 text-white" />
+                </span>
+              </span>
+            </a>
+          </div>
+        )}
+        <div className="w-full px-4 pb-4">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" asChild className="w-full justify-center">
               <a
                 href={tool.toolLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 justify-center w-full"
               >
                 <ExternalLink size={14} />
                 Visit Tool
               </a>
             </Button>
           </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="secondary" size="sm" asChild>
-              <a
-                href={tool.videoLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1"
-              >
-                <Play size={14} />
-                Tutorial
-              </a>
-            </Button>
-          </motion.div>
-        </CardFooter>
+        </div>
       </Card>
     </motion.div>
   );

@@ -53,3 +53,5 @@ Tool Link: [link to the tool]
 IMPORTANT: If the video doesn't have a tool link found, DO NOT include it in the results at all.
 ---
 `;
+
+export const YOUTUBE_RESULTS_INTRO = "Based on your search, I found several AI tools that match your needs. Here are the most relevant ones:";
