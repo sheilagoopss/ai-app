@@ -12,6 +12,8 @@ export interface AIToolResponse {
   summary: string;
   videoLink: string;
   title: string;
+  description?: string;  // Optional field for video description
+  url?: string;         // Optional field for video URL
 }
 
 class GeminiHelper {
@@ -108,7 +110,7 @@ Important rules:
 2. Each tool should only appear once - pick the most informative video for each tool
 3. Skip any video that isn't about a tool in the requested category
 4. Skip any video that doesn't clearly demonstrate or explain the tool
-5. Try to include 3-5 different AI tools if available
+5. IMPORTANT: Return EXACTLY 5 tools (or fewer if less are available) - pick the most relevant and informative ones
 6. Make sure each tool is actually designed for the requested purpose
 7. CRITICAL: Only include videos that have a tool link - if a video doesn't have a tool link, do not include it in the results`,
             },
@@ -138,9 +140,9 @@ Important rules:
     });
 
     const tools = (
-      response.functionCalls?.[0]?.args as unknown as {
-        tools: AIToolResponse[];
-      }
+        response.functionCalls?.[0]?.args as unknown as {
+          tools: AIToolResponse[];
+        }
     ).tools || [];
 
     // Map the tools to include the correct video link from the original results
@@ -164,7 +166,8 @@ Important rules:
       }))
     );
 
-    return translatedTools;
+    // Limit to 5 tools
+    return translatedTools.slice(0, 5);
   }
 }
 

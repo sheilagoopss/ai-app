@@ -17,10 +17,10 @@ export type YoutubeResult = {
 };
 
 interface YoutubeSearchItem {
-  id: {
-    videoId: string;
+  id?: {
+    videoId?: string;
   };
-  snippet: {
+  snippet?: {
     title: string;
     description: string;
   };
@@ -80,181 +80,135 @@ class YoutubeSearchHelper {
     query: string,
     maxResults = 50,
   ): Promise<YoutubeResult[]> {
-    // Check if we should use mock data (when API quota is exceeded)
-    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
-      return this.getMockYoutubeResults(query);
-    }
-
+    console.log('🔍 [YouTube] Searching with query:', query);
     const baseUrl = "https://www.googleapis.com/youtube/v3/search";
     const params = new URLSearchParams({
       part: "snippet",
-      q: `${query} ai tool`,
+      q: query,
       maxResults: maxResults.toString(),
       type: "video",
       key: this.YOUTUBE_API_V3_KEY,
+      order: "relevance",
+      videoDuration: "medium",
+      relevanceLanguage: "en",
+      regionCode: "US",
     });
+
+    console.log('🔍 [YouTube] Search params:', {
+      query,
+      maxResults,
+      order: "relevance",
+      videoDuration: "medium",
+      relevanceLanguage: "en",
+      regionCode: "US"
+    });
+
     const response = await HttpHelper.get(`${baseUrl}?${params.toString()}`);
     if (!response) {
+      console.log('❌ [YouTube] No response from API');
       return [];
     }
+
     const searchResults = response.data;
-    if (
-      !searchResults.items ||
-      !Array.isArray(searchResults.items) ||
-      searchResults.items.length === 0
-    ) {
-      console.log("No YouTube results found or API quota exceeded");
+    if (!searchResults.items || !Array.isArray(searchResults.items) || searchResults.items.length === 0) {
+      console.log('❌ [YouTube] No results found');
       return [];
     }
 
-    const genericPatterns = [
-      "top 10",
-      "top 5",
-      "must have",
-      "tools for",
-      "tools of",
-      "tools in",
-      "tools to",
-      "every developer",
-      "every programmer",
-      "every coder",
-      "list of",
-      "collection of",
-    ];
-    const aiToolKeywords = [
-      "ai",
-      "artificial intelligence",
-      "machine learning",
-      "ml",
-      "gpt",
-      "llm",
-      "chatbot",
-      "neural",
-      "deep learning",
-      "copilot",
-      "assistant",
-      "automation",
-    ];
-
-    // Filter videos first
-    const filteredItems = searchResults.items.filter((item: YoutubeSearchItem) => {
-      const title = (item.snippet?.title || "").toLowerCase();
-      const description = (item.snippet?.description || "").toLowerCase();
-
-      if (genericPatterns.some((pattern) => title.includes(pattern))) return false;
-      if (
-        !aiToolKeywords.some(
-          (keyword) => title.includes(keyword) || description.includes(keyword),
-        )
-      ) return false;
-      if (!item.id || !item.id.videoId) return false;
-      return true;
-    });
-
-    // Get all video IDs
-    const videoIds = filteredItems.map((item: YoutubeSearchItem) => item.id.videoId);
-    if (videoIds.length === 0) return [];
-
-    // Get details for all videos in one batch request
-    const details = await this.getVideoDetails(videoIds);
-    if (!details || !details.items || details.items.length === 0) return [];
-
-    // Create a map of video details for easy lookup
-    const videoDetailsMap = new Map(
-      details.items.map((item: YoutubeVideoDetails) => [item.id, item])
-    );
-
+    console.log(`✅ [YouTube] Found ${searchResults.items.length} initial results`);
     const resultsWithDetails: YoutubeResult[] = [];
-    for (const item of filteredItems) {
-      const videoId = item.id.videoId;
-      const videoInfo = videoDetailsMap.get(videoId) as YoutubeVideoDetails | undefined;
-      if (!videoInfo) continue;
 
-      const snippet = videoInfo.snippet;
-      const stats = videoInfo.statistics || {};
+    // Process videos in batches to get details
+    const videoIds = searchResults.items
+      .filter((item: YoutubeSearchItem) => item.id?.videoId)
+      .map((item: YoutubeSearchItem) => item.id!.videoId!);
 
-      // Format view count
-      const viewCount = parseInt(stats.viewCount || "0", 10);
-      let viewCountStr = `${viewCount} views`;
-      if (viewCount >= 1_000_000) {
-        viewCountStr = `${(viewCount / 1_000_000).toFixed(1)}M views`;
-      } else if (viewCount >= 1_000) {
-        viewCountStr = `${(viewCount / 1_000).toFixed(1)}K views`;
-      }
-
-      // Clean up and limit description
-      let cleanedDescription = "";
-      try {
-        const fullDescription = snippet.description || "";
-        const promoPhrases = [
-          "subscribe",
-          "like this video",
-          "follow me",
-          "check out my",
-          "download now",
-          "click here",
-          "sign up",
-          "join my",
-          "discount",
-          "off",
-          "sale",
-          "promo",
-          "coupon",
-        ];
-        const descLines = fullDescription.split("\n");
-        let cleanedDesc = "";
-        for (const line of descLines) {
-          const trimmed = line.trim();
-          if (
-            trimmed &&
-            !promoPhrases.some((promo) => trimmed.toLowerCase().includes(promo))
-          ) {
-            cleanedDesc = trimmed;
-            break;
-          }
-        }
-        if (!cleanedDesc && descLines.length > 0) {
-          cleanedDesc = descLines[0].trim();
-        }
-        cleanedDesc = this.findSentenceBoundary(cleanedDesc);
-        cleanedDescription = cleanedDesc;
-
-        // If description is too short, try to get another non-promo paragraph
-        if (cleanedDescription.length < 50 && descLines.length > 1) {
-          for (const line of descLines.slice(1)) {
-            const trimmed = line.trim();
-            if (
-              trimmed &&
-              !promoPhrases.some((promo) =>
-                trimmed.toLowerCase().includes(promo),
-              )
-            ) {
-              cleanedDesc = this.findSentenceBoundary(trimmed);
-              cleanedDescription = cleanedDesc;
-              break;
-            }
-          }
-        }
-      } catch (e) {
-        console.log(e);
-        cleanedDescription =
-          "[Contains special characters that cannot be displayed]";
-      }
-
-      resultsWithDetails.push({
-        title: snippet.title,
-        description: cleanedDescription,
-        url: `https://www.youtube.com/watch?v=${videoId}`,
-        source: "youtube",
-        source_name: "YouTube",
-        relevance_score: 1.0,
-        metadata: {
-          channel: snippet.channelTitle,
-          views: viewCountStr,
-          video_id: videoId,
-        },
-      });
+    if (videoIds.length === 0) {
+      console.log('❌ [YouTube] No valid video IDs found');
+      return [];
     }
+
+    console.log(`🔍 [YouTube] Processing ${videoIds.length} videos in batches`);
+
+    // Get video details in batches of 50 (YouTube API limit)
+    const batchSize = 50;
+    for (let i = 0; i < videoIds.length; i += batchSize) {
+      const batch = videoIds.slice(i, i + batchSize);
+      console.log(`🔍 [YouTube] Processing batch ${i/batchSize + 1} of ${Math.ceil(videoIds.length/batchSize)}`);
+      
+      const details = await this.getVideoDetails(batch);
+      
+      if (!details?.items) {
+        console.log(`❌ [YouTube] No details for batch ${i/batchSize + 1}`);
+        continue;
+      }
+
+      console.log(`✅ [YouTube] Got details for ${details.items.length} videos in batch ${i/batchSize + 1}`);
+
+      for (const videoInfo of details.items) {
+        const snippet = videoInfo.snippet;
+        const stats = videoInfo.statistics || {};
+
+        // Skip videos that are comparisons or "top tools" lists
+        const title = snippet.title.toLowerCase();
+        const skipPatterns = [
+          /top \d+ (?:best )?tools/i,  // "top 5 tools" or "top 5 best tools"
+          /best \d+ tools/i,           // "best 5 tools"
+          /vs\.? /i,                   // "vs" or "vs."
+          /versus /i,                  // "versus"
+          /comparison of/i,            // "comparison of"
+          /compared to/i,              // "compared to"
+          /roundup/i,                  // "roundup"
+          /tools compared/i,           // "tools compared"
+          /tools review/i,             // "tools review" (plural)
+        ];
+        
+        // Check if title matches any skip pattern
+        if (skipPatterns.some(pattern => pattern.test(title))) {
+          console.log('⏭️ [YouTube] Skipping comparison video:', title);
+          continue;
+        }
+
+        // Format view count like Python version
+        const viewCount = parseInt(stats.viewCount || "0", 10);
+        let viewCountStr = `${viewCount} views`;
+        if (viewCount >= 1_000_000) {
+          viewCountStr = `${(viewCount / 1_000_000).toFixed(1)}M views`;
+        } else if (viewCount >= 1_000) {
+          viewCountStr = `${(viewCount / 1_000).toFixed(1)}K views`;
+        }
+
+        // Clean description like Python version
+        let description = "";
+        try {
+          description = (snippet.description || "").slice(0, 150);
+        } catch (e) {
+          description = "[Contains special characters that cannot be displayed]";
+        }
+
+        resultsWithDetails.push({
+          title: snippet.title,
+          description: description,
+          url: `https://www.youtube.com/watch?v=${videoInfo.id}`,
+          source: "youtube",
+          source_name: "YouTube",
+          relevance_score: 1.0,
+          metadata: {
+            channel: snippet.channelTitle,
+            views: viewCountStr,
+            video_id: videoInfo.id,
+          },
+        });
+      }
+
+      // Add delay between batches
+      if (i + batchSize < videoIds.length) {
+        console.log('⏳ [YouTube] Waiting 1s before next batch...');
+        await this.sleep(1000);
+      }
+    }
+
+    console.log(`✅ [YouTube] Processed ${resultsWithDetails.length} videos total`);
     return resultsWithDetails;
   }
   private async generateSearchKeywords(question: string): Promise<string[]> {
@@ -265,33 +219,175 @@ class YoutubeSearchHelper {
     return keywords?.split("\n") || [];
   }
   public async search(query: string): Promise<AIToolResponse[]> {
-    // Get combined results from multiple tool-specific searches
-    const keywords = await this.generateSearchKeywords(query);
-    let allResults: YoutubeResult[] = [];
+    console.log('🚀 [Search] Starting search for:', query);
     
-    // Process keywords in parallel with a limit
-    const batchSize = 3; // Process 3 keywords at a time
-    for (let i = 0; i < keywords.length; i += batchSize) {
-      const batch = keywords.slice(i, i + batchSize);
-      const batchResults = await Promise.all(
-        batch.map(keyword => this.searchYoutube(keyword, 10))
-      );
-      allResults = allResults.concat(...batchResults);
-      
-      // Add a small delay between batches to avoid rate limits
-      if (i + batchSize < keywords.length) {
-        await this.sleep(1000);
+    // Translate Hebrew query to English using Gemini
+    const translationPrompt = `Translate this Hebrew query to English, keeping it concise and search-friendly. Only return the English translation, nothing else.
+    
+Hebrew query: ${query}`;
+
+    const translatedQuery = await this.geminiHelper.generateContent(translationPrompt);
+    console.log('🌐 [Search] Translated query:', { from: query, to: translatedQuery });
+    
+    // Search for individual tool reviews, excluding "top tools" and "best tools" videos
+    const searchQuery = `${translatedQuery} ai tool -"top tools" -"best tools" -"comparison" -"vs" review demo tutorial`;
+    console.log('🔍 [Search] Using query:', searchQuery);
+    
+    const results = await this.searchYoutube(searchQuery, 50);
+    console.log(`✅ [Search] Found ${results.length} results`);
+
+    if (results.length > 0) {
+      // Use Gemini to pick most relevant tools, with emphasis on specific tool reviews
+      const selectedResults = await this.geminiHelper.pickMostRelevantAiTools(results);
+      console.log(`✅ [Search] Selected ${selectedResults.length} relevant tools`);
+      return selectedResults;
+    }
+
+    console.log('❌ [Search] No results found');
+    return [];
+  }
+
+  private extractToolDomain(title: string, description: string): string | null {
+    // Common AI tool domains
+    const commonDomains = [
+      'chatgpt.com',
+      'midjourney.com',
+      'dalle.com',
+      'claude.ai',
+      'gemini.google.com',
+      'perplexity.ai',
+      'notion.ai',
+      'copilot.microsoft.com',
+      'github.com/copilot',
+      'stability.ai',
+      'runwayml.com',
+      'elevenlabs.io',
+      'synthesia.io',
+      'descript.com',
+      'murf.ai',
+      'play.ht',
+      'wellsaidlabs.com',
+      'speechify.com',
+      'otter.ai',
+      'fireflies.ai',
+      'notta.ai',
+      'grammarly.com',
+      'jasper.ai',
+      'copy.ai',
+      'writesonic.com',
+      'rytr.me',
+      'simplified.co',
+      'peppertype.ai',
+      'wordtune.com',
+      'quillbot.com',
+      'rephraser.ai',
+      'textcortex.com',
+      'anyword.com',
+      'contentbot.ai',
+      'hypotenuse.ai',
+      'neuroflash.com',
+      'texta.ai',
+      'textmetrics.com',
+      'wordai.com',
+      'wordhero.co',
+      'writesonic.com',
+      'zapier.com',
+      'make.com',
+      'n8n.io',
+      'automate.io',
+      'integromat.com',
+      'pipedream.com',
+      'tray.io',
+      'workato.com',
+      'zoho.com',
+      'monday.com',
+      'clickup.com',
+      'asana.com',
+      'trello.com',
+      'notion.so',
+      'miro.com',
+      'figma.com',
+      'canva.com',
+      'adobe.com',
+      'picsart.com',
+      'remove.bg',
+      'cleanup.pictures',
+      'inpaint.com',
+      'stability.ai',
+      'runwayml.com',
+      'synthesia.io',
+      'descript.com',
+      'murf.ai',
+      'play.ht',
+      'wellsaidlabs.com',
+      'speechify.com',
+      'otter.ai',
+      'fireflies.ai',
+      'notta.ai',
+      'grammarly.com',
+      'jasper.ai',
+      'copy.ai',
+      'writesonic.com',
+      'rytr.me',
+      'simplified.co',
+      'peppertype.ai',
+      'wordtune.com',
+      'quillbot.com',
+      'rephraser.ai',
+      'textcortex.com',
+      'anyword.com',
+      'contentbot.ai',
+      'hypotenuse.ai',
+      'neuroflash.com',
+      'texta.ai',
+      'textmetrics.com',
+      'wordai.com',
+      'wordhero.co',
+      'writesonic.com',
+      'zapier.com',
+      'make.com',
+      'n8n.io',
+      'automate.io',
+      'integromat.com',
+      'pipedream.com',
+      'tray.io',
+      'workato.com',
+      'zoho.com',
+      'monday.com',
+      'clickup.com',
+      'asana.com',
+      'trello.com',
+      'notion.so',
+      'miro.com',
+      'figma.com',
+      'canva.com',
+      'adobe.com',
+      'picsart.com',
+      'remove.bg',
+      'cleanup.pictures',
+      'inpaint.com'
+    ];
+
+    // Combine title and description for searching
+    const text = `${title} ${description}`.toLowerCase();
+
+    // Look for domain mentions in the text
+    for (const domain of commonDomains) {
+      if (text.includes(domain)) {
+        return domain;
       }
     }
 
-    if (allResults.length > 0) {
-      const selectedResults = await this.geminiHelper.pickMostRelevantAiTools(
-        allResults,
-      );
-
-      return selectedResults;
+    // If no domain found, try to extract from title
+    const titleWords = title.toLowerCase().split(/\s+/);
+    for (const word of titleWords) {
+      // Look for common TLDs
+      if (word.endsWith('.com') || word.endsWith('.ai') || word.endsWith('.io')) {
+        return word;
+      }
     }
-    return [];
+
+    return null;
   }
   private getMockYoutubeResults(query: string): YoutubeResult[] {
     return [
