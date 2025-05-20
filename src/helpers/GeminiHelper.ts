@@ -21,6 +21,28 @@ class GeminiHelper {
     this.gemini = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   }
 
+  private async translateToHebrew(text: string): Promise<string> {
+    const response = await this.gemini.models.generateContent({
+      model: "gemini-2.0-flash-001",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Translate this text to Hebrew. Return ONLY the translation, no explanations or additional text. Keep URLs and technical terms unchanged:\n${text}`,
+            },
+          ],
+        },
+      ],
+    });
+    
+    if (!response?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return text; // Return original text if translation fails
+    }
+    
+    return response.candidates[0].content.parts[0].text;
+  }
+
   async generateContent(prompt: string) {
     const response = await this.gemini.models.generateContent({
       model: "gemini-2.0-flash-001",
@@ -114,13 +136,35 @@ Important rules:
         tools: [{ functionDeclarations: [getAIToolVideos] }],
       },
     });
-    return (
-      (
-        response.functionCalls?.[0]?.args as unknown as {
-          tools: AIToolResponse[];
-        }
-      ).tools || []
+
+    const tools = (
+      response.functionCalls?.[0]?.args as unknown as {
+        tools: AIToolResponse[];
+      }
+    ).tools || [];
+
+    // Map the tools to include the correct video link from the original results
+    const toolsWithVideoLinks = tools.map(tool => {
+      // Extract video ID from the Gemini-provided video link
+      const videoId = tool.videoLink.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/)?.[1];
+      // Find the original result by video ID
+      const originalResult = results.find(r => r.metadata.video_id === videoId);
+      return {
+        ...tool,
+        videoLink: originalResult?.url || tool.videoLink
+      };
+    });
+
+    // Translate the results to Hebrew
+    const translatedTools = await Promise.all(
+      toolsWithVideoLinks.map(async (tool) => ({
+        ...tool,
+        title: await this.translateToHebrew(tool.title),
+        summary: await this.translateToHebrew(tool.summary),
+      }))
     );
+
+    return translatedTools;
   }
 }
 

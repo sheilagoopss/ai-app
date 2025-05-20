@@ -11,14 +11,23 @@ const HomeHeader = () => {
   const { userData, logout } = useAuth();
   
   return (
-    <Header style={{ backgroundColor: "white" }}>
-      <div className="flex justify-between items-center py-4">
-        <div className="text-2xl font-bold cursor-pointer" onClick={() => router.push("/")}>
-          AI Tools
+    <Header style={{ backgroundColor: "white" }} className="h-16">
+      <div className="flex justify-between items-center h-full">
+        <div className="flex items-center gap-8 h-full">
+          <div className="text-2xl font-bold cursor-pointer flex items-center h-full" onClick={() => router.push("/")}>
+            betzefer.ai
+          </div>
+          <Button
+            type="text"
+            onClick={() => router.push("/tools")}
+            className="text-base h-full flex items-center"
+          >
+            AI Tools Directory
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 h-full">
           {userData ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 h-full">
             <Popover
               content={
                 <Button
@@ -39,6 +48,7 @@ const HomeHeader = () => {
             <Button
               icon={<LoginOutlined />}
               onClick={() => router.push("/login")}
+              className="h-full flex items-center"
             >
               Login
             </Button>

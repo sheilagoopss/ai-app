@@ -11,7 +11,7 @@
 
 @layer base {
   html {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Open Sans', system-ui, sans-serif;
   }
   :root {
     --background: 0 0% 100%;
@@ -97,7 +97,7 @@ article, aside, canvas, details, embed,
 figure, figcaption, footer, header, hgroup, 
 menu, nav, output, ruby, section, summary,
 time, mark, audio, video, button, input, select, textarea {
-  font-family: 'DM Sans', sans-serif !important;
+  font-family: 'Open Sans', sans-serif !important;
 }
 
 body {

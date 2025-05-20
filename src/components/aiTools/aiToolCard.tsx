@@ -6,9 +6,16 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Play } from "lucide-react";
+import { ExternalLink, Play, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+
+declare global {
+  interface Window {
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
 
 interface Tool {
   toolLink: string;
@@ -29,12 +36,84 @@ function getYoutubeId(url: string) {
 
 export function AIToolCard({ tool }: ToolCardProps) {
   const domain = new URL(tool.toolLink).hostname.replace("www.", "");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playerRef = useRef<YT.Player | null>(null);
 
   const toolName =
     domain.split(".")[0].charAt(0).toUpperCase() +
     domain.split(".")[0].slice(1);
 
   const faviconUrl = `https://www.google.com/s2/favicons?domain=${tool.toolLink}&sz=128`;
+
+  useEffect(() => {
+    // Function to initialize the player
+    const initializePlayer = () => {
+      const videoId = getYoutubeId(tool.videoLink);
+      console.log('Initializing player for video:', videoId, 'from URL:', tool.videoLink);
+      if (videoId) {
+        playerRef.current = new YT.Player(`youtube-player-${videoId}`, {
+          height: '192',
+          width: '100%',
+          videoId: videoId,
+          playerVars: {
+            'playsinline': 1,
+            'controls': 0,
+            'rel': 0,
+            'modestbranding': 1
+          },
+          events: {
+            'onStateChange': (event: YT.OnStateChangeEvent) => {
+              console.log('Player state changed:', event.data);
+              setIsPlaying(event.data === YT.PlayerState.PLAYING);
+            },
+            'onReady': () => {
+              console.log('Player is ready');
+            },
+            'onError': (event: YT.OnErrorEvent) => {
+              console.error('Player error:', event.data);
+            }
+          }
+        });
+      } else {
+        console.error('Could not extract video ID from URL:', tool.videoLink);
+      }
+    };
+
+    // Check if YouTube API is already loaded
+    if (window.YT && window.YT.Player) {
+      console.log('YouTube API already loaded, initializing player');
+      initializePlayer();
+    } else {
+      console.log('Loading YouTube API');
+      // Load YouTube IFrame API
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+      // Initialize YouTube player when API is ready
+      window.onYouTubeIframeAPIReady = () => {
+        console.log('YouTube API ready callback triggered');
+        initializePlayer();
+      };
+    }
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy();
+      }
+    };
+  }, [tool.videoLink]);
+
+  const togglePlay = () => {
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
+      }
+    }
+  };
 
   return (
     <motion.div
@@ -62,42 +141,39 @@ export function AIToolCard({ tool }: ToolCardProps) {
         </CardHeader>
         <CardContent className="pb-3 flex-1">
           <motion.h2
-            className="font-medium text-base line-clamp-2 mb-2"
+            className="font-medium text-base line-clamp-2 mb-2 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
+            dir="rtl"
           >
             {tool.title}
           </motion.h2>
           <motion.p
-            className="text-sm text-muted-foreground line-clamp-3"
+            className="text-sm text-muted-foreground line-clamp-3 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
+            dir="rtl"
           >
             {tool.summary}
           </motion.p>
         </CardContent>
         {tool.videoLink && getYoutubeId(tool.videoLink) && (
           <div className="w-full px-4 flex justify-center mt-2 mb-4">
-            <a
-              href={tool.videoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-lg overflow-hidden w-full relative"
-              style={{ minHeight: '12rem' }}
-            >
-              <img
-                src={`https://img.youtube.com/vi/${getYoutubeId(tool.videoLink)}/hqdefault.jpg`}
-                alt="YouTube Tutorial Thumbnail"
-                className="w-full h-48 object-cover"
-              />
-              <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="bg-black/70 rounded-full p-3 flex items-center justify-center">
-                  <Play className="w-8 h-8 text-white" />
-                </span>
-              </span>
-            </a>
+            <div className="relative w-full rounded-lg overflow-hidden" style={{ minHeight: '12rem' }}>
+              <div id={`youtube-player-${getYoutubeId(tool.videoLink)}`} className="w-full h-48" />
+              <button
+                onClick={togglePlay}
+                className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+              >
+                {isPlaying ? (
+                  <Pause className="w-12 h-12 text-white" />
+                ) : (
+                  <Play className="w-12 h-12 text-white" />
+                )}
+              </button>
+            </div>
           </div>
         )}
         <div className="w-full px-4 pb-4">
@@ -108,9 +184,10 @@ export function AIToolCard({ tool }: ToolCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 justify-center w-full"
+                dir="rtl"
               >
                 <ExternalLink size={14} />
-                Visit Tool
+                ביקור בכלי
               </a>
             </Button>
           </motion.div>

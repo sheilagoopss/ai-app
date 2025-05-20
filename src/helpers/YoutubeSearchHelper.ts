@@ -16,6 +16,28 @@ export type YoutubeResult = {
   };
 };
 
+interface YoutubeSearchItem {
+  id: {
+    videoId: string;
+  };
+  snippet: {
+    title: string;
+    description: string;
+  };
+}
+
+interface YoutubeVideoDetails {
+  id: string;
+  snippet: {
+    title: string;
+    description: string;
+    channelTitle: string;
+  };
+  statistics: {
+    viewCount: string;
+  };
+}
+
 class YoutubeSearchHelper {
   private YOUTUBE_API_V3_KEY: string;
   private geminiHelper: GeminiHelper;
@@ -28,11 +50,11 @@ class YoutubeSearchHelper {
   private sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  private async getVideoDetails(videoId: string): Promise<any | null> {
+  private async getVideoDetails(videoIds: string[]): Promise<any | null> {
     const baseUrl = "https://www.googleapis.com/youtube/v3/videos";
     const params = new URLSearchParams({
       part: "snippet,statistics",
-      id: videoId,
+      id: videoIds.join(','),
       key: this.YOUTUBE_API_V3_KEY,
     });
     const response = await HttpHelper.get(`${baseUrl}?${params.toString()}`);
@@ -58,6 +80,11 @@ class YoutubeSearchHelper {
     query: string,
     maxResults = 50,
   ): Promise<YoutubeResult[]> {
+    // Check if we should use mock data (when API quota is exceeded)
+    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+      return this.getMockYoutubeResults(query);
+    }
+
     const baseUrl = "https://www.googleapis.com/youtube/v3/search";
     const params = new URLSearchParams({
       part: "snippet",
@@ -109,25 +136,40 @@ class YoutubeSearchHelper {
       "automation",
     ];
 
-    const resultsWithDetails: YoutubeResult[] = [];
-    for (const item of searchResults.items) {
+    // Filter videos first
+    const filteredItems = searchResults.items.filter((item: YoutubeSearchItem) => {
       const title = (item.snippet?.title || "").toLowerCase();
       const description = (item.snippet?.description || "").toLowerCase();
 
-      if (genericPatterns.some((pattern) => title.includes(pattern))) continue;
+      if (genericPatterns.some((pattern) => title.includes(pattern))) return false;
       if (
         !aiToolKeywords.some(
           (keyword) => title.includes(keyword) || description.includes(keyword),
         )
-      )
-        continue;
-      if (!item.id || !item.id.videoId) continue;
+      ) return false;
+      if (!item.id || !item.id.videoId) return false;
+      return true;
+    });
 
+    // Get all video IDs
+    const videoIds = filteredItems.map((item: YoutubeSearchItem) => item.id.videoId);
+    if (videoIds.length === 0) return [];
+
+    // Get details for all videos in one batch request
+    const details = await this.getVideoDetails(videoIds);
+    if (!details || !details.items || details.items.length === 0) return [];
+
+    // Create a map of video details for easy lookup
+    const videoDetailsMap = new Map(
+      details.items.map((item: YoutubeVideoDetails) => [item.id, item])
+    );
+
+    const resultsWithDetails: YoutubeResult[] = [];
+    for (const item of filteredItems) {
       const videoId = item.id.videoId;
-      const details = await this.getVideoDetails(videoId);
-      if (!details || !details.items || details.items.length === 0) continue;
+      const videoInfo = videoDetailsMap.get(videoId) as YoutubeVideoDetails | undefined;
+      if (!videoInfo) continue;
 
-      const videoInfo = details.items[0];
       const snippet = videoInfo.snippet;
       const stats = videoInfo.statistics || {};
 
@@ -226,12 +268,22 @@ class YoutubeSearchHelper {
     // Get combined results from multiple tool-specific searches
     const keywords = await this.generateSearchKeywords(query);
     let allResults: YoutubeResult[] = [];
-    for (const keyword of keywords) {
-      const results = await this.searchYoutube(keyword, 20);
-      allResults = allResults.concat(results);
-      // Optionally sleep to avoid API rate limits
-      await this.sleep(100);
+    
+    // Process keywords in parallel with a limit
+    const batchSize = 3; // Process 3 keywords at a time
+    for (let i = 0; i < keywords.length; i += batchSize) {
+      const batch = keywords.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(keyword => this.searchYoutube(keyword, 10))
+      );
+      allResults = allResults.concat(...batchResults);
+      
+      // Add a small delay between batches to avoid rate limits
+      if (i + batchSize < keywords.length) {
+        await this.sleep(1000);
+      }
     }
+
     if (allResults.length > 0) {
       const selectedResults = await this.geminiHelper.pickMostRelevantAiTools(
         allResults,
@@ -240,6 +292,49 @@ class YoutubeSearchHelper {
       return selectedResults;
     }
     return [];
+  }
+  private getMockYoutubeResults(query: string): YoutubeResult[] {
+    return [
+      {
+        title: "Top 5 AI Tools for Developers in 2024",
+        description: "Discover the most powerful AI tools that are revolutionizing software development. From code completion to automated testing, these tools will boost your productivity.",
+        url: "https://www.youtube.com/watch?v=mock1",
+        source: "youtube",
+        source_name: "YouTube",
+        relevance_score: 1.0,
+        metadata: {
+          channel: "Tech Channel",
+          views: "100K views",
+          video_id: "mock1"
+        }
+      },
+      {
+        title: "How to Use AI Tools for Web Development",
+        description: "Learn how to leverage AI tools to streamline your web development workflow. This tutorial covers practical examples and real-world applications.",
+        url: "https://www.youtube.com/watch?v=mock2",
+        source: "youtube",
+        source_name: "YouTube",
+        relevance_score: 0.9,
+        metadata: {
+          channel: "Web Dev Channel",
+          views: "50K views",
+          video_id: "mock2"
+        }
+      },
+      {
+        title: "AI Tools for Content Creation",
+        description: "Explore the best AI tools for content creators. From writing assistants to image generators, these tools will help you create better content faster.",
+        url: "https://www.youtube.com/watch?v=mock3",
+        source: "youtube",
+        source_name: "YouTube",
+        relevance_score: 0.8,
+        metadata: {
+          channel: "Content Creator",
+          views: "75K views",
+          video_id: "mock3"
+        }
+      }
+    ];
   }
 }
 

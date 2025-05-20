@@ -1,92 +1,100 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Button, Input, Spin } from "antd";
 import { Tool } from "@/types/tools";
 import useFetchTools from "@/hooks/useFetchTools";
-import AISearchInput from "@/components/common/AISearchInput";
+import { caseInsensitiveSearch } from "@/utils/caseInsensitveMatch";
 import AiCard from "@/components/aiTools/aiCard";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
 
-export default function ToolsPage() {
-  const { tools, fetchTools, isFetching, error } = useFetchTools();
+const ITEMS_PER_PAGE = 20;
+
+export default function Scraper() {
+  const [filteredResults, setFilteredResults] = useState<Tool[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredTools, setFilteredTools] = useState<Tool[]>([]);
+  const { paginatedTools, error, fetchTools, lastItem, tools, isFetching } =
+    useFetchTools();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch tools when component mounts
+  // Initial fetch when component mounts
   useEffect(() => {
-    fetchTools({ limitToFirst: 100 });
-  }, [fetchTools]);
+    fetchTools({
+      limitToFirst: ITEMS_PER_PAGE,
+    });
+  }, []);
 
-  // Filter tools based on search term
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredTools(tools);
-      return;
+    if (paginatedTools.length > 0) {
+      setFilteredResults(paginatedTools);
     }
+  }, [paginatedTools]);
 
-    const searchLower = searchTerm.toLowerCase();
-    const filtered = tools.filter(tool => 
-      tool.toolName.toLowerCase().includes(searchLower) ||
-      tool.description.toLowerCase().includes(searchLower) ||
-      tool.toolTask.toLowerCase().includes(searchLower)
-    );
-    setFilteredTools(filtered);
-  }, [searchTerm, tools]);
+  const handleClear = () => {
+    setSearchTerm("");
+    setFilteredResults(paginatedTools);
+  };
+
+  useEffect(() => {
+    fetchTools({
+      limitToFirst: ITEMS_PER_PAGE,
+      startAfter: lastItem,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2">AI Tools Directory</h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            Discover and explore the best AI tools for your needs
-          </p>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-bold text-gray-900">AI Tools</h1>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
 
-          {/* Search Section */}
-          <div className="mb-8">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search AI tools..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 pl-12 pr-4 rounded-lg border-2"
-              />
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+        {/* Search Bar */}
+        <div className="mb-4 flex flex-col gap-2">
+          <Input.Search
+            size="large"
+            onSearch={(value) => {
+              setSearchTerm(value);
+              const filtered = tools.filter((tool) =>
+                caseInsensitiveSearch(tool.toolName, value) ||
+                caseInsensitiveSearch(tool.description, value)
+              );
+              setFilteredResults(filtered);
+            }}
+            placeholder="Search for a tool..."
+            allowClear
+            onClear={handleClear}
+          />
+        </div>
+
+        <div>
+          {isFetching && filteredResults.length === 0 ? (
+            <div className="flex justify-center items-center h-screen w-full">
+              <Spin />
             </div>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="text-red-500 mb-4">
-              {error}
+          ) : (
+            <div className="space-y-4 w-full flex flex-col items-center">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredResults.map((item, index) => (
+                  <AiCard key={index} tool={item} index={index} />
+                ))}
+              </div>
+              {filteredResults.length > 0 && (
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() => {
+                    setCurrentPage(currentPage + 1);
+                  }}
+                  disabled={isFetching}
+                >
+                  Load More
+                </Button>
+              )}
             </div>
           )}
-
-          {/* Results Section */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {isFetching ? (
-              <div className="col-span-full text-center py-8">
-                <div className="animate-pulse">
-                  Loading tools...
-                </div>
-              </div>
-            ) : filteredTools.length > 0 ? (
-              filteredTools.map((tool, idx) => (
-                <AiCard key={tool.id || idx} tool={tool} index={idx} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-8">
-                {searchTerm ? (
-                  <p>No tools found matching "{searchTerm}"</p>
-                ) : (
-                  <p>No tools available at the moment.</p>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

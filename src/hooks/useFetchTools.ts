@@ -74,8 +74,7 @@ const useFetchTools = () => {
       } catch (error: any) {
         console.error("Error fetching tools:", error);
         setError(
-          "Error fetching tools from Firestore. Please try again later. " +
-            error,
+          error?.message || "Error fetching tools from Firestore. Please try again later."
         );
       } finally {
         setIsFetching(false);

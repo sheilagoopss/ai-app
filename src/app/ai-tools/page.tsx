@@ -1,42 +1,34 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Tool } from "@/types/tools";
-import useFetchTools from "@/hooks/useFetchTools";
 import { useYoutubeSearch } from "@/hooks/useYoutubeSearch";
 import AISearchInput from "@/components/common/AISearchInput";
 import AIToolCard from "@/components/aiTools/aiToolCard";
-import AiCard from "@/components/aiTools/aiCard";
-import ThinkingCard from "@/components/common/ThinkingCard";
 import ThinkingAnimation from "@/components/common/ThinkingAnimation";
-import { PICK_MOST_RELEVANT_PROMPT, YOUTUBE_RESULTS_INTRO } from "@/constants/prompts";
+import { YOUTUBE_RESULTS_INTRO } from "@/constants/prompts";
 import { SparklesIcon, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const ITEMS_PER_PAGE = 20;
+import GeminiHelper from "@/helpers/GeminiHelper";
 
 type UIState = "idle" | "thinking" | "results";
 
 export default function Scraper() {
-  const { tools, fetchTools } = useFetchTools();
   const { isLoadingYoutubeTools, searchYoutubeAiTools } = useYoutubeSearch();
   const thinkingRef = React.useRef<HTMLDivElement>(null);
+  const geminiHelper = React.useRef(new GeminiHelper());
 
   const [searchTerm, setSearchTerm] = useState("");
   const [youtubeResults, setYoutubeResults] = useState<any[]>([]);
-  const [showAllAITools, setShowAllAITools] = useState(false);
   const [uiState, setUIState] = useState<UIState>("idle");
   const [lastSearchTerm, setLastSearchTerm] = useState("");
   const [input, setInput] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ query: string; results: any[] }>>([]);
-
-  // Fetch tools when component mounts or when showAllAITools is true
-  useEffect(() => {
-    if (showAllAITools) {
-      fetchTools({ limitToFirst: ITEMS_PER_PAGE });
-    }
-  }, [showAllAITools, fetchTools]);
+  const [translatedTexts, setTranslatedTexts] = useState({
+    subtitle: "מצא את כלי הבינה המלאכותית הטובים ביותר לצרכים שלך",
+    placeholder: "תאר איזה כלי בינה מלאכותית אתה מחפש...",
+    searchButton: "חיפוש"
+  });
 
   // Scroll to thinking animation
   const scrollToThinking = () => {
@@ -95,31 +87,20 @@ export default function Scraper() {
     setSearchTerm("");
   };
 
-  // Clear AI tools
-  const handleClearAITools = () => setShowAllAITools(false);
-
   return (
     <div className="min-h-screen bg-[#FFA87F] flex flex-col items-center w-full pt-16 pb-32">
-      <h1 className="text-3xl font-bold mb-2">AI Tools</h1>
-      <p className="text-lg font-semibold text-black mb-8">Find the best AI tools for your needs</p>
+      <h1 className="text-3xl font-bold mb-2">betzefer.ai</h1>
+      <p className="text-lg font-semibold text-black mb-8">{translatedTexts.subtitle}</p>
       {uiState === "idle" && (
-        <>
-          <AISearchInput
-            value={searchTerm}
-            onChange={setSearchTerm}
-            onSubmit={handleSearch}
-            isLoading={isLoadingYoutubeTools}
-            buttonText="Search"
-            placeholder="Describe what kind of AI tool you're looking for..."
-            className=""
-          />
-          <button
-            className="mt-6 mb-2 px-6 py-2 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
-            onClick={() => setShowAllAITools(true)}
-          >
-            Show All AI Tools
-          </button>
-        </>
+        <AISearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onSubmit={handleSearch}
+          isLoading={isLoadingYoutubeTools}
+          buttonText={translatedTexts.searchButton}
+          placeholder={translatedTexts.placeholder}
+          className=""
+        />
       )}
       {uiState !== "idle" && (
         <>
@@ -151,7 +132,7 @@ export default function Scraper() {
                           <div className="flex overflow-hidden flex-col justify-center self-start p-6 max-w-3xl w-full rounded-[40px] bg-white">
                             <div className="flex flex-col w-full max-md:max-w-full">
                               <div className="w-full">
-                                <p className="mb-4 text-base text-gray-700">
+                                <p className="mb-4 text-base text-gray-700" dir="rtl">
                                   {YOUTUBE_RESULTS_INTRO}
                                 </p>
                                 <div className="flex overflow-x-auto gap-6 pb-4 w-full">
@@ -213,7 +194,7 @@ export default function Scraper() {
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Search for another AI tool"
+                    placeholder=""
                     className="flex-1 bg-white border-[#E5E7FB] focus-visible:ring-[#E5E7FB] h-16 rounded-2xl text-lg px-6"
                     disabled={uiState === "thinking"}
                   />
@@ -229,20 +210,6 @@ export default function Scraper() {
             </div>
           </div>
         </>
-      )}
-      {/* All AI Tools */}
-      {showAllAITools && (
-        <div className="w-full max-w-5xl mt-10 flex flex-col items-center mb-24">
-          <div className="flex w-full justify-between items-center mb-2">
-            <h2 className="text-xl font-bold">All AI Tools</h2>
-            <button onClick={handleClearAITools} className="text-sm text-blue-600 hover:underline">Clear</button>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
-            {tools.map((item, idx) => (
-              <AiCard key={idx} tool={item} index={idx} />
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );

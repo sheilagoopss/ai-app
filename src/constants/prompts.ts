@@ -54,4 +54,4 @@ IMPORTANT: If the video doesn't have a tool link found, DO NOT include it in the
 ---
 `;
 
-export const YOUTUBE_RESULTS_INTRO = "Based on your search, I found several AI tools that match your needs. Here are the most relevant ones:";
+export const YOUTUBE_RESULTS_INTRO = "מצאתי מספר כלי בינה מלאכותית שמתאימים לצרכים שלך. הנה הרלוונטיים ביותר:";

@@ -31,6 +31,7 @@ const AISearchInput: React.FC<AISearchInputProps> = ({
             aria-label="Search for AI tools"
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            dir="rtl"
           />
         </div>
         <button
