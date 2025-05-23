@@ -227,10 +227,10 @@ export function AIToolCard({ tool }: ToolCardProps) {
               className="mt-2 text-muted-foreground hover:text-primary"
               asChild
             >
-              <a
-                href={tool.videoLink}
-                target="_blank"
-                rel="noopener noreferrer"
+            <a
+              href={tool.videoLink}
+              target="_blank"
+              rel="noopener noreferrer"
                 className="flex items-center gap-1"
               >
                 <ExternalLink size={14} />

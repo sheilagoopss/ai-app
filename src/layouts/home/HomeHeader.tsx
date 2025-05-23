@@ -13,17 +13,37 @@ const HomeHeader = () => {
   return (
     <Header style={{ backgroundColor: "white" }} className="h-16">
       <div className="flex justify-between items-center h-full">
-        <div className="flex items-center gap-8 h-full">
+        <div className="flex items-center h-full">
           <div className="text-2xl font-bold cursor-pointer flex items-center h-full" onClick={() => router.push("/")}>
             betzefer.ai
           </div>
-          <Button
-            type="text"
-            onClick={() => router.push("/tools")}
-            className="text-base h-full flex items-center"
-          >
-            AI Tools Directory
-          </Button>
+          <div className="w-16"></div>
+          <div className="flex items-center gap-6 h-full">
+            <Button
+              type="text"
+              onClick={() => router.push("/tools")}
+              className="!text-lg !font-semibold h-full flex items-center hover:!text-[#FFA87F] hover:!bg-transparent hover:underline !bg-transparent"
+              style={{ fontSize: '1.125rem', fontWeight: 600, backgroundColor: 'transparent' }}
+            >
+              כלי בינה מלאכותית
+            </Button>
+            <Button
+              type="text"
+              onClick={() => router.push("/courses")}
+              className="!text-lg !font-semibold h-full flex items-center hover:!text-[#FFA87F] hover:!bg-transparent hover:underline !bg-transparent"
+              style={{ fontSize: '1.125rem', fontWeight: 600, backgroundColor: 'transparent' }}
+            >
+              קורסים וסדנאות
+            </Button>
+            <Button
+              type="text"
+              onClick={() => router.push("/contact")}
+              className="!text-lg !font-semibold h-full flex items-center hover:!text-[#FFA87F] hover:!bg-transparent hover:underline !bg-transparent"
+              style={{ fontSize: '1.125rem', fontWeight: 600, backgroundColor: 'transparent' }}
+            >
+              צור קשר
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-2 h-full">
           {userData ? (

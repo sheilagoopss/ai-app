@@ -222,15 +222,16 @@ class YoutubeSearchHelper {
     console.log('🚀 [Search] Starting search for:', query);
     
     // Translate Hebrew query to English using Gemini
-    const translationPrompt = `Translate this Hebrew query to English, keeping it concise and search-friendly. Only return the English translation, nothing else.
-    
+    const translationPrompt = `Translate this Hebrew query to English, keeping it concise and search-friendly. 
+Only return the English translation, nothing else.
+
 Hebrew query: ${query}`;
 
     const translatedQuery = await this.geminiHelper.generateContent(translationPrompt);
     console.log('🌐 [Search] Translated query:', { from: query, to: translatedQuery });
     
-    // Search for individual tool reviews, excluding "top tools" and "best tools" videos
-    const searchQuery = `${translatedQuery} ai tool -"top tools" -"best tools" -"comparison" -"vs" review demo tutorial`;
+    // Create a more specific search query that focuses on individual AI tools
+    const searchQuery = `${translatedQuery}   -"comparison" -"vs" -"versus" -"list" -"roundup" -"comparison" -"reviews" -"comparison" -"vs" -"versus" -"alternatives" -"list" -"roundup"`;
     console.log('🔍 [Search] Using query:', searchQuery);
     
     const results = await this.searchYoutube(searchQuery, 50);

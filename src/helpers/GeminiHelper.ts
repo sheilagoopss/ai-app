@@ -105,22 +105,33 @@ class GeminiHelper {
               text: `I will give you a list of youtube videos. 
 Based on this information, curate a list of resources that are ONLY about specific AI tools that match the original search query.
 Each result must be about a concrete, named AI tool that is relevant to the requested category.
-Important rules:
-1. ONLY include videos about AI tools that are specifically relevant to the search query's category/purpose
-2. Each tool should only appear once - pick the most informative video for each tool
-3. Skip any video that isn't about a tool in the requested category
-4. Skip any video that doesn't clearly demonstrate or explain the tool
-5. IMPORTANT: Return EXACTLY 5 tools (or fewer if less are available) - pick the most relevant and informative ones
-6. Make sure each tool is actually designed for the requested purpose
-7. CRITICAL: Only include videos that have a tool link - if a video doesn't have a tool link, do not include it in the results`,
-            },
-            {
-              text: `
-             For example:
-- If user searches for "content writing tools", only show AI writing tools like Jasper, Copy.ai, etc.
-- If user searches for "image generation", only show image AI tools like Midjourney, DALL-E, etc.
-- If user searches for "coding tools", only show coding AI tools like GitHub Copilot, Codeium, etc.
-            `,
+
+CRITICAL RULES:
+1. ONLY include videos that are about a SINGLE, SPECIFIC AI tool (not multiple tools or comparisons)
+2. The tool MUST be an AI-powered tool (not just any software)
+3. Each tool should only appear once - pick the most informative video for each tool
+4. Skip any video that isn't about a tool in the requested category
+5. Skip any video that doesn't clearly demonstrate or explain the tool
+6. IMPORTANT: Return EXACTLY 5 tools (or fewer if less are available) - pick the most relevant and informative ones
+7. Make sure each tool is actually designed for the requested purpose
+8. CRITICAL: Only include videos that have a tool link - if a video doesn't have a tool link, do not include it in the results
+9. Skip any video that is a comparison, list, or review of multiple tools
+10. Skip any video that doesn't focus on a single tool's features and usage
+
+Examples of valid AI tools by category:
+- Image editing: Midjourney, DALL-E, Stable Diffusion
+- Writing: ChatGPT, Jasper, Copy.ai
+- Coding: GitHub Copilot, Codeium
+- Video: Runway, Descript
+- Audio: ElevenLabs, Murf
+- Design: Canva AI, Adobe Firefly
+
+DO NOT include:
+- Regular software that isn't AI-powered
+- Videos comparing multiple tools
+- Videos listing "top" or "best" tools
+- Videos about non-AI tools
+- Videos that don't focus on a single tool's features and usage`,
             },
             {
               text: `List of videos: ${JSON.stringify(results)}`,

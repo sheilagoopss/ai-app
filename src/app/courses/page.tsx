@@ -9,6 +9,13 @@ import { ICourse } from "@/types/course";
 import { Search } from "lucide-react";
 import { useGetCourses } from "@/hooks/useCourse";
 import { Spin } from "antd";
+import { Open_Sans } from "next/font/google";
+
+const openSansHebrew = Open_Sans({
+  subsets: ["hebrew"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-open-sans-hebrew",
+});
 
 const categories = [
   "Web Development",
@@ -18,7 +25,7 @@ const categories = [
 ];
 const levels = ["Beginner", "Intermediate", "Advanced"];
 
-export default function Courses() {
+export default function CoursesPage() {
   const { getCourses, isFetchingCourses } = useGetCourses();
   const [courses, setCourses] = useState<ICourse[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,53 +61,17 @@ export default function Courses() {
   }, [getCourses]);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-8">Available Courses</h1>
-
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search courses..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <CourseFilter
-            categories={categories}
-            levels={levels}
-            onFilterChange={handleFilterChange}
-          />
+    <section
+      className={`min-h-screen w-full py-16 md:py-24 ${openSansHebrew.variable} font-sans bg-[#FFA87F]`}
+      dir="rtl"
+    >
+      <div className="container mx-auto px-4 md:px-0">
+        <div className="flex flex-col items-center text-center">
+          <h2 className="text-5xl font-bold tracking-tight mb-2 text-black">
+            קורסים וסדנאות
+          </h2>
         </div>
-
-        {filteredCourses.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              No courses found matching your criteria.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredCourses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onViewCourse={setSelectedCourse}
-              />
-            ))}
-          </div>
-        )}
       </div>
-
-      <CourseViewer
-        course={selectedCourse}
-        onClose={() => setSelectedCourse(null)}
-      />
-      <div className="flex justify-center items-center h-screen">
-        <Spin spinning={isFetchingCourses} />
-      </div>
-    </div>
+    </section>
   );
 }

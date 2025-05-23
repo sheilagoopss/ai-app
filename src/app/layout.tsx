@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ConfigProvider } from "antd";
 import Script from "next/script";
 import Layout from "@/layouts/Layout";
+import WhatsAppButton from "@/components/common/WhatsAppButton";
 
 export const metadata: Metadata = {
   title: "AI App",
@@ -51,6 +52,7 @@ export default function RootLayout({
               <Layout>{children}</Layout>
             </AntdRegistry>
           </AuthProvider>
+          <WhatsAppButton />
         </ConfigProvider>
       </body>
     </html>
