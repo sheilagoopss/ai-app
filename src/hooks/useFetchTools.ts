@@ -2,8 +2,10 @@
 
 import { useCallback, useState } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import axios from "axios";
 import { Tool } from "@/types/tools";
+import { collection, getDocs, query, orderBy, limit, startAfter, where } from "firebase/firestore";
+import { db } from "@/firebase/config";
+import { COLLECTIONS } from "@/firebase/collections";
 
 const useFetchTools = () => {
   const [isFetching, setIsFetching] = useState(false);
@@ -17,45 +19,62 @@ const useFetchTools = () => {
   const fetchTools = useCallback(
     async ({
       limitToFirst = 10,
-      startAfter,
+      startAfter: startAfterId,
+      searchTerm = "",
     }: {
       limitToFirst: number;
       startAfter?: string;
+      searchTerm?: string;
     }) => {
       setIsFetching(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        params.append("orderBy", `"id"`);
-        params.append("limitToFirst", `${limitToFirst}`);
-        if (startAfter !== undefined) {
-          params.append("startAfter", `"${startAfter}"`);
+        const toolsRef = collection(db, COLLECTIONS.aiTools);
+        let q = query(toolsRef);
+
+        if (searchTerm) {
+          const searchQuery = searchTerm.toLowerCase().trim();
+          q = query(
+            toolsRef,
+            where("searchQuery", ">=", searchQuery),
+            where("searchQuery", "<", searchQuery + "\uf8ff"),
+            orderBy("searchQuery")
+          );
+        } else {
+          q = query(toolsRef, orderBy("searchQuery"));
         }
-        const response = await axios.get(
-          `${
-            process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
-          }/ai_tools.json?${params.toString()}`,
-        );
-        const toolsArray = (Object.values(response.data) as Tool[]).sort(
-          (a, b) => a.toolName.localeCompare(b.toolName),
-        ) as Tool[];
+
+        q = query(q, limit(limitToFirst));
+        
+        if (startAfterId) {
+          q = query(q, startAfter(startAfterId));
+        }
+
+        const snapshot = await getDocs(q);
+        const toolsArray = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Tool[];
+
         setPaginatedTools(toolsArray);
         setTotal(toolsArray.length);
-        setIsFetching(false);
-        setLastItem(toolsArray[toolsArray.length - 1].toolName);
+        setLastItem(toolsArray[toolsArray.length - 1]?.toolName);
 
         // Get total number of tools
         setIsFetchingTotal(true);
-        const totalTools = await axios.get(
-          `${process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL}/ai_tools.json`,
-        );
-        setTools(Object.values(totalTools.data) as Tool[]);
-        setTotal(Object.keys(totalTools.data).length);
+        const totalSnapshot = await getDocs(toolsRef);
+        const allTools = totalSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Tool[];
+        
+        setTools(allTools);
+        setTotal(allTools.length);
         setIsFetchingTotal(false);
       } catch (error: any) {
+        console.error("Error fetching tools:", error);
         setError(
-          "Error fetching tools from Firebase. Please try again later. " +
-            error,
+          error?.message || "Error fetching tools from Firestore. Please try again later."
         );
       } finally {
         setIsFetching(false);

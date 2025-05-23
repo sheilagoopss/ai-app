@@ -5,9 +5,10 @@ import { useState } from "react";
 interface AIToolSearchProps {
   setKeywords: (keywords: string[]) => void;
   onClear: () => void;
+  className?: string;
 }
 
-const AIToolSearch: React.FC<AIToolSearchProps> = ({ setKeywords, onClear }) => {
+const AIToolSearch: React.FC<AIToolSearchProps> = ({ setKeywords, onClear, className }) => {
   const [isSearching, setIsSearching] = useState(false);
   
   const onSearch = async (value: string) => {
@@ -63,6 +64,11 @@ Always return your output as comma separated keywords.`;
       loading={isSearching}
       allowClear
       onClear={onClear}
+      className={className}
+      style={{
+        backgroundColor: 'white',
+        borderRadius: '0.75rem',
+      }}
     />
   );
 };
