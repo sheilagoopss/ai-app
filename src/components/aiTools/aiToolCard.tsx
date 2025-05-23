@@ -35,7 +35,7 @@ let pendingInitializations: (() => void)[] = [];
 // Helper to load YouTube API
 function loadYoutubeApi() {
   if (isYoutubeApiLoaded) return Promise.resolve();
-  
+
   return new Promise<void>((resolve) => {
     if (window.YT && window.YT.Player) {
       isYoutubeApiLoaded = true;
@@ -44,17 +44,17 @@ function loadYoutubeApi() {
     }
 
     window.onYouTubeIframeAPIReady = () => {
-      console.log('YouTube API ready callback triggered');
+      console.log("YouTube API ready callback triggered");
       isYoutubeApiLoaded = true;
       // Initialize all pending players
-      pendingInitializations.forEach(init => init());
+      pendingInitializations.forEach((init) => init());
       pendingInitializations = [];
       resolve();
     };
 
-    const tag = document.createElement('script');
+    const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
+    const firstScriptTag = document.getElementsByTagName("script")[0];
     firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
   });
 }
@@ -62,10 +62,10 @@ function loadYoutubeApi() {
 // Helper to extract YouTube video ID from a URL
 function getYoutubeId(url: string) {
   if (!url) {
-    console.error('No URL provided to getYoutubeId');
+    console.error("No URL provided to getYoutubeId");
     return null;
   }
-  
+
   // Handle direct video IDs
   if (/^[\w-]{11}$/.test(url)) {
     return url;
@@ -81,17 +81,31 @@ function getYoutubeId(url: string) {
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match && match[1]) {
-      console.log('✅ [YouTube] Successfully extracted video ID:', match[1], 'from URL:', url);
+      console.log(
+        "✅ [YouTube] Successfully extracted video ID:",
+        match[1],
+        "from URL:",
+        url,
+      );
       return match[1];
     }
   }
 
-  console.error('❌ [YouTube] Could not extract video ID from URL:', url);
+  console.error("❌ [YouTube] Could not extract video ID from URL:", url);
   return null;
 }
 
 export function AIToolCard({ tool }: ToolCardProps) {
-  const domain = new URL(tool.toolLink).hostname.replace("www.", "");
+  const domain = tool.toolLink
+    ? (() => {
+        try {
+          return new URL(tool.toolLink).hostname.replace("www.", "");
+        } catch (e) {
+          console.warn("Invalid URL:", tool.toolLink);
+          return "unknown-domain";
+        }
+      })()
+    : "unknown-domain";
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<YT.Player | null>(null);
 
@@ -105,43 +119,48 @@ export function AIToolCard({ tool }: ToolCardProps) {
     // Function to initialize the player
     const initializePlayer = () => {
       const videoId = getYoutubeId(tool.videoLink);
-      console.log('Initializing player for video:', videoId, 'from URL:', tool.videoLink);
+      console.log(
+        "Initializing player for video:",
+        videoId,
+        "from URL:",
+        tool.videoLink,
+      );
       if (videoId) {
         playerRef.current = new YT.Player(`youtube-player-${videoId}`, {
-          height: '192',
-          width: '100%',
+          height: "192",
+          width: "100%",
           videoId: videoId,
           playerVars: {
-            'playsinline': 1,
-            'controls': 0,
-            'rel': 0,
-            'modestbranding': 1
+            playsinline: 1,
+            controls: 0,
+            rel: 0,
+            modestbranding: 1,
           },
           events: {
-            'onStateChange': (event: YT.OnStateChangeEvent) => {
-              console.log('Player state changed:', event.data);
+            onStateChange: (event: YT.OnStateChangeEvent) => {
+              console.log("Player state changed:", event.data);
               setIsPlaying(event.data === YT.PlayerState.PLAYING);
             },
-            'onReady': () => {
-              console.log('Player is ready for video:', videoId);
+            onReady: () => {
+              console.log("Player is ready for video:", videoId);
             },
-            'onError': (event: YT.OnErrorEvent) => {
-              console.error('Player error for video:', videoId, event.data);
-            }
-          }
+            onError: (event: YT.OnErrorEvent) => {
+              console.error("Player error for video:", videoId, event.data);
+            },
+          },
         });
       } else {
-        console.error('Could not extract video ID from URL:', tool.videoLink);
+        console.error("Could not extract video ID from URL:", tool.videoLink);
       }
     };
 
     // Load YouTube API if not already loaded
     if (!isYoutubeApiLoaded) {
-      console.log('Loading YouTube API');
+      console.log("Loading YouTube API");
       pendingInitializations.push(initializePlayer);
       loadYoutubeApi();
     } else {
-      console.log('YouTube API already loaded, initializing player');
+      console.log("YouTube API already loaded, initializing player");
       initializePlayer();
     }
 
@@ -208,8 +227,14 @@ export function AIToolCard({ tool }: ToolCardProps) {
         </CardContent>
         {tool.videoLink && getYoutubeId(tool.videoLink) && (
           <div className="w-full px-4 flex flex-col items-center mt-2 mb-4">
-            <div className="relative w-full rounded-lg overflow-hidden" style={{ minHeight: '12rem' }}>
-              <div id={`youtube-player-${getYoutubeId(tool.videoLink)}`} className="w-full h-48" />
+            <div
+              className="relative w-full rounded-lg overflow-hidden"
+              style={{ minHeight: "12rem" }}
+            >
+              <div
+                id={`youtube-player-${getYoutubeId(tool.videoLink)}`}
+                className="w-full h-48"
+              />
               <button
                 onClick={togglePlay}
                 className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
@@ -227,10 +252,10 @@ export function AIToolCard({ tool }: ToolCardProps) {
               className="mt-2 text-muted-foreground hover:text-primary"
               asChild
             >
-            <a
-              href={tool.videoLink}
-              target="_blank"
-              rel="noopener noreferrer"
+              <a
+                href={tool.videoLink}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-1"
               >
                 <ExternalLink size={14} />
@@ -241,7 +266,12 @@ export function AIToolCard({ tool }: ToolCardProps) {
         )}
         <div className="w-full px-4 pb-4">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant="outline" size="sm" asChild className="w-full justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="w-full justify-center"
+            >
               <a
                 href={tool.toolLink}
                 target="_blank"

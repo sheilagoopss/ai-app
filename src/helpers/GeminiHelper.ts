@@ -5,6 +5,7 @@ import {
   Type,
 } from "@google/genai";
 import { YoutubeResult } from "./YoutubeSearchHelper";
+import { CHAT_PROMPT } from "@/constants/prompts";
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
 export interface AIToolResponse {
@@ -12,8 +13,8 @@ export interface AIToolResponse {
   summary: string;
   videoLink: string;
   title: string;
-  description?: string;  // Optional field for video description
-  url?: string;         // Optional field for video URL
+  description?: string; // Optional field for video description
+  url?: string; // Optional field for video URL
 }
 
 class GeminiHelper {
@@ -37,11 +38,11 @@ class GeminiHelper {
         },
       ],
     });
-    
+
     if (!response?.candidates?.[0]?.content?.parts?.[0]?.text) {
       return text; // Return original text if translation fails
     }
-    
+
     return response.candidates[0].content.parts[0].text;
   }
 
@@ -150,21 +151,26 @@ DO NOT include:
       },
     });
 
-    const tools = (
+    const tools =
+      (
         response.functionCalls?.[0]?.args as unknown as {
           tools: AIToolResponse[];
         }
-    ).tools || [];
+      ).tools || [];
 
     // Map the tools to include the correct video link from the original results
-    const toolsWithVideoLinks = tools.map(tool => {
+    const toolsWithVideoLinks = tools.map((tool) => {
       // Extract video ID from the Gemini-provided video link
-      const videoId = tool.videoLink.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/)?.[1];
+      const videoId = tool.videoLink.match(
+        /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([\w-]{11})/,
+      )?.[1];
       // Find the original result by video ID
-      const originalResult = results.find(r => r.metadata.video_id === videoId);
+      const originalResult = results.find(
+        (r) => r.metadata.video_id === videoId,
+      );
       return {
         ...tool,
-        videoLink: originalResult?.url || tool.videoLink
+        videoLink: originalResult?.url || tool.videoLink,
       };
     });
 
@@ -174,11 +180,40 @@ DO NOT include:
         ...tool,
         title: await this.translateToHebrew(tool.title),
         summary: await this.translateToHebrew(tool.summary),
-      }))
+      })),
     );
 
     // Limit to 5 tools
     return translatedTools.slice(0, 5);
+  }
+
+  async chat({
+    aiTools,
+    messages,
+  }: {
+    aiTools: AIToolResponse[];
+    messages: {
+      role: "user" | "bot";
+      content: string;
+    }[];
+  }) {
+    const result = await this.gemini.models.generateContent({
+      model: "gemini-2.0-flash",
+      config: {
+        systemInstruction: `${CHAT_PROMPT}\n\nAvailable AI Tools:\n${aiTools
+          .map(
+            (tool) =>
+              `- ${tool.title}\n  Link: ${tool.toolLink}\n  Summary: ${
+                tool.summary
+              }\n  Video: ${tool.videoLink}\n  Description: ${
+                tool.description || ""
+              }\n  URL: ${tool.url || ""}`,
+          )
+          .join("\n")}`,
+      },
+      contents: messages.map((m) => `${m.role}: ${m.content}`).join("\n"),
+    });
+    return result.text || "";
   }
 }
 
